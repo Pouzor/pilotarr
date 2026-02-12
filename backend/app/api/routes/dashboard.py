@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.schemas import (
     CalendarEventResponse,
@@ -16,6 +16,18 @@ from app.models import CalendarEvent, DashboardStatistic, JellyseerrRequest, Lib
 from app.models.enums import ItemSortBy
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+TORRENT_INFO_ALLOWED_KEYS = {"seeding_time", "ratio", "size", "download_date", "status"}
+
+
+def _build_torrent_info_array(item: LibraryItem) -> list[dict]:
+    """Build torrent_info array from the torrents relationship, stripping unwanted keys."""
+    result = []
+    for t in item.torrents:
+        if not t.torrent_info:
+            continue
+        result.append({k: v for k, v in t.torrent_info.items() if k in TORRENT_INFO_ALLOWED_KEYS})
+    return result
 
 
 @router.get("/", response_model=DashboardResponse)
@@ -37,7 +49,32 @@ async def get_dashboard(
     statistics = db.query(DashboardStatistic).all()
 
     # Items récents
-    recent_items = db.query(LibraryItem).order_by(LibraryItem.created_at.desc()).limit(recent_items_limit).all()
+    recent_items_query = (
+        db.query(LibraryItem)
+        .options(selectinload(LibraryItem.torrents))
+        .order_by(LibraryItem.created_at.desc())
+        .limit(recent_items_limit)
+        .all()
+    )
+    recent_items = []
+    for item in recent_items_query:
+        data = {
+            "id": item.id,
+            "title": item.title,
+            "year": item.year,
+            "media_type": item.media_type,
+            "image_url": item.image_url,
+            "image_alt": item.image_alt,
+            "quality": item.quality,
+            "rating": item.rating,
+            "description": item.description,
+            "added_date": item.added_date,
+            "size": item.size,
+            "nb_media": item.nb_media,
+            "created_at": item.created_at,
+            "torrent_info": _build_torrent_info_array(item),
+        }
+        recent_items.append(data)
 
     # Événements du calendrier (prochains jours)
     today = datetime.now().date()
@@ -78,6 +115,7 @@ async def get_recent_items(
     db: Session = Depends(get_db),
 ):
     """Récupérer les items récemment ajoutés"""
+    # Sort still uses the pre-aggregated torrent_info JSON column for ratio
     sort_mapping = {
         ItemSortBy.ADDED_DATE: LibraryItem.created_at,
         ItemSortBy.TITLE: LibraryItem.title,
@@ -92,8 +130,30 @@ async def get_recent_items(
     else:
         sort_clause = sort_column.desc()
 
-    items = db.query(LibraryItem).order_by(sort_clause).limit(limit).all()
-    return items
+    items = db.query(LibraryItem).options(selectinload(LibraryItem.torrents)).order_by(sort_clause).limit(limit).all()
+
+    # Override torrent_info with array from relationship at serialization time
+    results = []
+    for item in items:
+        data = {
+            "id": item.id,
+            "title": item.title,
+            "year": item.year,
+            "media_type": item.media_type,
+            "image_url": item.image_url,
+            "image_alt": item.image_alt,
+            "quality": item.quality,
+            "rating": item.rating,
+            "description": item.description,
+            "added_date": item.added_date,
+            "size": item.size,
+            "nb_media": item.nb_media,
+            "created_at": item.created_at,
+            "torrent_info": _build_torrent_info_array(item),
+        }
+        results.append(data)
+
+    return results
 
 
 @router.get("/calendar", response_model=list[CalendarEventResponse])

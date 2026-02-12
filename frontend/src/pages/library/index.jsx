@@ -47,6 +47,53 @@ const formatFileSize = (size) => {
   return "0.0 GB";
 };
 
+/**
+ * Aggregate an array of torrent info objects into summary values
+ * @param {Array} torrentInfoArray - Array of {seeding_time, ratio, size, download_date, status}
+ * @returns {Object} Aggregated values
+ */
+const aggregateTorrentInfo = (torrentInfoArray) => {
+  if (!Array.isArray(torrentInfoArray) || torrentInfoArray.length === 0) {
+    return null;
+  }
+
+  const count = torrentInfoArray.length;
+
+  const ratios = torrentInfoArray.map((t) => t?.ratio).filter((r) => r != null);
+  const seedingTimes = torrentInfoArray
+    .map((t) => t?.seeding_time)
+    .filter((s) => s != null);
+  const sizes = torrentInfoArray.map((t) => t?.size).filter((s) => s != null);
+  const dates = torrentInfoArray
+    .map((t) => t?.download_date)
+    .filter((d) => d != null);
+  const statuses = torrentInfoArray
+    .map((t) => t?.status)
+    .filter((s) => s != null);
+
+  const avgRatio =
+    ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 0;
+  const avgSeedingTime =
+    seedingTimes.length > 0
+      ? seedingTimes.reduce((a, b) => a + b, 0) / seedingTimes.length
+      : 0;
+  const totalSize = sizes.reduce((a, b) => a + b, 0);
+  const latestDate =
+    dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+  const uniqueStatuses = [...new Set(statuses)];
+  const status =
+    uniqueStatuses.length === 1 ? uniqueStatuses[0] : "downloading";
+
+  return {
+    ratio: avgRatio,
+    seedingTime: avgSeedingTime,
+    size: totalSize,
+    downloadedDate: latestDate,
+    status,
+    torrentCount: count,
+  };
+};
+
 const Library = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -71,23 +118,25 @@ const Library = () => {
         );
         // Transform API response to match component structure
         const transformedData =
-          data?.map((item) => ({
-            id: item?.id,
-            title: item?.title,
-            type: item?.media_type,
-            quality: item?.quality || "N/A",
-            size: item?.size || "0.0 GB",
-            addedDate: item?.created_at?.split("T")?.[0] || item?.added_date,
-            viewCount: 99, // Hard-coded as requested
-            torrent_info: item?.torrent_info,
-            torrentCount:
-              item?.torrent_info?.torrent_count || item?.torrent_count || 0,
-            hasSubtitles: true,
-            seedRatio: item?.torrent_info?.ratio || 0,
-            nbMedia: item?.nb_media || 0,
-            image: item?.image_url || "https://via.placeholder.com/300x450",
-            imageAlt: item?.image_alt || `${item?.title} poster`,
-          })) || [];
+          data?.map((item) => {
+            const agg = aggregateTorrentInfo(item?.torrent_info);
+            return {
+              id: item?.id,
+              title: item?.title,
+              type: item?.media_type,
+              quality: item?.quality || "N/A",
+              size: item?.size || "0.0 GB",
+              addedDate: item?.created_at?.split("T")?.[0] || item?.added_date,
+              viewCount: 99, // Hard-coded as requested
+              torrent_info: item?.torrent_info,
+              torrentCount: agg?.torrentCount || item?.torrent_count || 0,
+              hasSubtitles: true,
+              seedRatio: agg?.ratio || 0,
+              nbMedia: item?.nb_media || 0,
+              image: item?.image_url || "https://via.placeholder.com/300x450",
+              imageAlt: item?.image_alt || `${item?.title} poster`,
+            };
+          }) || [];
         setMediaData(transformedData);
       } catch (error) {
         console.error("Error loading media data:", error);

@@ -28,6 +28,40 @@ const FileInfoPanel = ({ media }) => {
     return `${mb.toFixed(0)} MB`;
   };
 
+  // Aggregate torrent_info array into summary values
+  const torrentArray = Array.isArray(media?.torrentInfo)
+    ? media.torrentInfo
+    : [];
+  const hasTorrents = torrentArray.length > 0;
+
+  const aggregated = hasTorrents
+    ? (() => {
+        const ratios = torrentArray
+          .map((t) => t?.ratio)
+          .filter((r) => r != null);
+        const seedingTimes = torrentArray
+          .map((t) => t?.seeding_time)
+          .filter((s) => s != null);
+        const statuses = torrentArray
+          .map((t) => t?.status)
+          .filter((s) => s != null);
+        const uniqueStatuses = [...new Set(statuses)];
+        return {
+          ratio:
+            ratios.length > 0
+              ? ratios.reduce((a, b) => a + b, 0) / ratios.length
+              : 0,
+          seedingTime:
+            seedingTimes.length > 0
+              ? seedingTimes.reduce((a, b) => a + b, 0) / seedingTimes.length
+              : 0,
+          status:
+            uniqueStatuses.length === 1 ? uniqueStatuses[0] : "downloading",
+          torrentCount: torrentArray.length,
+        };
+      })()
+    : null;
+
   return (
     <div className="bg-card border border-border rounded-lg p-6 space-y-6">
       <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -114,7 +148,7 @@ const FileInfoPanel = ({ media }) => {
       </div>
 
       {/* qBittorrent Info */}
-      {media?.torrentInfo && (
+      {hasTorrents && aggregated && (
         <div className="space-y-3 pt-3 border-t border-border">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase flex items-center gap-2">
             <Icon name="Download" size={16} />
@@ -126,9 +160,7 @@ const FileInfoPanel = ({ media }) => {
             <span className="text-sm text-muted-foreground">Status</span>
             <StatusIndicator
               status={
-                media?.torrentInfo?.status === "seeding"
-                  ? "available"
-                  : "downloading"
+                aggregated.status === "seeding" ? "available" : "downloading"
               }
               type="availability"
             />
@@ -138,97 +170,79 @@ const FileInfoPanel = ({ media }) => {
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Ratio</span>
             <span
-              className={`text-sm font-bold ${getSeedRatioColor(media?.torrentInfo?.ratio)}`}
+              className={`text-sm font-bold ${getSeedRatioColor(aggregated.ratio)}`}
             >
-              {media?.torrentInfo?.ratio?.toFixed(2) || "0.00"}
+              {aggregated.ratio?.toFixed(2) || "0.00"}
             </span>
           </div>
 
           {/* Seeding Time */}
-          {media?.torrentInfo?.seedingTime && (
+          {aggregated.seedingTime > 0 && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 Seeding Time
               </span>
               <span className="text-sm text-foreground">
-                {formatSecondsToTime(media?.torrentInfo?.seedingTime)}
+                {formatSecondsToTime(aggregated.seedingTime)}
               </span>
             </div>
           )}
 
-          {/* Progress */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Progress</span>
-            <span className="text-sm text-foreground font-medium">
-              {media?.torrentInfo?.progress || 100}%
-            </span>
-          </div>
-
           {/* Torrent Count */}
-          {media?.torrentInfo?.torrent_count > 1 && (
+          {aggregated.torrentCount > 1 && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Torrents</span>
               <span className="text-sm text-foreground font-medium">
-                {media?.torrentInfo?.torrent_count}
+                {aggregated.torrentCount}
               </span>
             </div>
           )}
 
-          {/* Individual Torrents (expandable, for TV shows with multiple torrents) */}
-          {media?.torrentInfo?.torrent_count > 1 &&
-            media?.individualTorrents?.length > 0 && (
-              <div className="pt-2">
-                <button
-                  onClick={() =>
-                    setShowIndividualTorrents(!showIndividualTorrents)
-                  }
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Icon
-                    name={
-                      showIndividualTorrents ? "ChevronDown" : "ChevronRight"
-                    }
-                    size={14}
-                  />
-                  <span>
-                    {showIndividualTorrents ? "Hide" : "Show"} Individual
-                    Torrents
-                  </span>
-                </button>
+          {/* Individual Torrents (expandable, for items with multiple torrents) */}
+          {torrentArray.length > 1 && (
+            <div className="pt-2">
+              <button
+                onClick={() =>
+                  setShowIndividualTorrents(!showIndividualTorrents)
+                }
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Icon
+                  name={showIndividualTorrents ? "ChevronDown" : "ChevronRight"}
+                  size={14}
+                />
+                <span>
+                  {showIndividualTorrents ? "Hide" : "Show"} Individual Torrents
+                </span>
+              </button>
 
-                {showIndividualTorrents && (
-                  <div className="mt-2 space-y-2">
-                    {media?.individualTorrents?.map((torrent, index) => (
-                      <div
-                        key={torrent?.hash || index}
-                        className="bg-muted/50 rounded-md p-2 space-y-1"
-                      >
-                        <div
-                          className="text-xs font-medium text-foreground truncate"
-                          title={torrent?.name}
+              {showIndividualTorrents && (
+                <div className="mt-2 space-y-2">
+                  {torrentArray.map((torrent, index) => (
+                    <div
+                      key={index}
+                      className="bg-muted/50 rounded-md p-2 space-y-1"
+                    >
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span
+                          className={`font-bold ${getSeedRatioColor(torrent?.ratio)}`}
                         >
-                          {torrent?.name || `Torrent ${index + 1}`}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span
-                            className={`font-bold ${getSeedRatioColor(torrent?.ratio)}`}
-                          >
-                            R: {torrent?.ratio?.toFixed(2) || "0.00"}
+                          R: {torrent?.ratio?.toFixed(2) || "0.00"}
+                        </span>
+                        <span>{formatBytes(torrent?.size)}</span>
+                        <span>{torrent?.status || "unknown"}</span>
+                        {torrent?.seeding_time > 0 && (
+                          <span>
+                            {formatSecondsToTime(torrent?.seeding_time)}
                           </span>
-                          <span>{formatBytes(torrent?.size)}</span>
-                          <span>{torrent?.status || "unknown"}</span>
-                          {torrent?.seeding_time > 0 && (
-                            <span>
-                              {formatSecondsToTime(torrent?.seeding_time)}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
