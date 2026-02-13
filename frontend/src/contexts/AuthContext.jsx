@@ -1,13 +1,9 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext({});
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
 
 export const AuthProvider = ({ children }) => {
@@ -17,35 +13,21 @@ export const AuthProvider = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(false);
 
   // Auth methods - now handled by backend
-  const signIn = async (email, password) => {
-    try {
-      // TODO: Implement backend authentication if needed
-      console.log('Auth now handled by backend');
-      return { data: null, error: { message: 'Authentication not configured' } };
-    } catch (error) {
-      return { error: { message: 'Network error. Please try again.' } };
-    }
+  // TODO: Implement backend authentication if needed
+  const signIn = async (_email, _password) => {
+    return { data: null, error: { message: "Authentication not configured" } };
   };
 
   const signOut = async () => {
-    try {
-      setUser(null);
-      setUserProfile(null);
-      return { error: null };
-    } catch (error) {
-      return { error: { message: 'Network error. Please try again.' } };
-    }
+    setUser(null);
+    setUserProfile(null);
+    return { error: null };
   };
 
-  const updateProfile = async (updates) => {
-    if (!user) return { error: { message: 'No user logged in' } };
-    
-    try {
-      // TODO: Implement backend profile update if needed
-      return { data: null, error: { message: 'Profile update not configured' } };
-    } catch (error) {
-      return { error: { message: 'Network error. Please try again.' } };
-    }
+  // TODO: Implement backend profile update if needed
+  const updateProfile = async (_updates) => {
+    if (!user) return { error: { message: "No user logged in" } };
+    return { data: null, error: { message: "Profile update not configured" } };
   };
 
   const value = {
@@ -56,12 +38,8 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     updateProfile,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
