@@ -110,12 +110,12 @@ class MetricsService:
             bandwidth_status = "error" if bandwidth_mbps > 500 else ("warning" if bandwidth_mbps > 100 else "success")
 
             # Compter les sessions actives
-            active_sessions_count = db.query(PlaybackSession).filter(PlaybackSession.is_active == True).count()
+            active_sessions_count = db.query(PlaybackSession).filter(PlaybackSession.is_active).count()
 
             # Compter les transcodages actifs
             active_transcoding_count = (
                 db.query(PlaybackSession)
-                .filter(PlaybackSession.is_active == True, PlaybackSession.transcoding_progress > 0)
+                .filter(PlaybackSession.is_active, PlaybackSession.transcoding_progress > 0)
                 .count()
             )
 

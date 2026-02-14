@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analytics, dashboard, jellyseerr, services, sync, torrents
+from app.api.routes import analytics, dashboard, jellyseerr, library, services, sync, torrents
 from app.core.config import settings
 from app.core.security import verify_api_key
 from app.db import check_db_connection, init_db
@@ -54,6 +54,7 @@ app.include_router(services.router, prefix="/api", dependencies=[Depends(verify_
 app.include_router(dashboard.router, prefix="/api", dependencies=[Depends(verify_api_key)])
 app.include_router(jellyseerr.router, prefix="/api", dependencies=[Depends(verify_api_key)])
 app.include_router(sync.router, prefix="/api", dependencies=[Depends(verify_api_key)])
+app.include_router(library.router, prefix="/api", dependencies=[Depends(verify_api_key)])
 app.include_router(analytics.router, prefix="/api")
 app.include_router(torrents.router, dependencies=[Depends(verify_api_key)])
 

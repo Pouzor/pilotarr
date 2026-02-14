@@ -5,7 +5,7 @@ import Icon from "../../components/AppIcon";
 
 import MediaGrid from "./components/MediaGrid";
 import FilterToolbar from "./components/FilterToolbar";
-import { getRecentItems } from "../../services/libraryService";
+import { getLibraryItems } from "../../services/libraryService";
 
 /**
  * Format file size from API response
@@ -111,7 +111,7 @@ const Library = () => {
     const fetchMediaData = async () => {
       setLoading(true);
       try {
-        const data = await getRecentItems(
+        const data = await getLibraryItems(
           limit,
           filters?.sortBy,
           filters?.order,

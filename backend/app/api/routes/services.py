@@ -102,14 +102,14 @@ async def test_service_connection(service_name: ServiceType, db: Session = Depen
         ServiceType.JELLYSEERR: JellyseerrConnector,
     }
 
-    ConnectorClass = connector_map.get(service_name)
-    if not ConnectorClass:
+    connector_class = connector_map.get(service_name)
+    if not connector_class:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Type de service non supporté: {service_name}"
         )
 
     # Passer le port au connecteur si disponible
-    connector = ConnectorClass(base_url=service.url, api_key=service.api_key, port=service.port)
+    connector = connector_class(base_url=service.url, api_key=service.api_key, port=service.port)
 
     try:
         success, message = await connector.test_connection()

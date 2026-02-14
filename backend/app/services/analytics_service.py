@@ -166,7 +166,7 @@ class AnalyticsService:
                 .filter(
                     PlaybackSession.media_id == media_id,
                     PlaybackSession.user_id == user_id,
-                    PlaybackSession.is_active == True,
+                    PlaybackSession.is_active,
                 )
                 .order_by(desc(PlaybackSession.start_time))
                 .first()
@@ -216,7 +216,7 @@ class AnalyticsService:
                 .filter(
                     PlaybackSession.media_id == media_id,
                     PlaybackSession.user_id == user_id,
-                    PlaybackSession.is_active == True,
+                    PlaybackSession.is_active,
                 )
                 .order_by(desc(PlaybackSession.start_time))
                 .first()
@@ -244,7 +244,7 @@ class AnalyticsService:
                 .filter(
                     PlaybackSession.media_id == media_id,
                     PlaybackSession.user_id == user_id,
-                    PlaybackSession.is_active == True,
+                    PlaybackSession.is_active,
                 )
                 .order_by(desc(PlaybackSession.start_time))
                 .first()
@@ -375,10 +375,7 @@ class AnalyticsService:
     def get_active_sessions(db: Session) -> list[PlaybackSession]:
         """Récupère toutes les sessions actives"""
         return (
-            db.query(PlaybackSession)
-            .filter(PlaybackSession.is_active == True)
-            .order_by(desc(PlaybackSession.start_time))
-            .all()
+            db.query(PlaybackSession).filter(PlaybackSession.is_active).order_by(desc(PlaybackSession.start_time)).all()
         )
 
     @staticmethod
@@ -396,7 +393,7 @@ class AnalyticsService:
             # Trouver les sessions actives trop anciennes
             orphan_sessions = (
                 db.query(PlaybackSession)
-                .filter(PlaybackSession.is_active == True, PlaybackSession.start_time < cutoff_time)
+                .filter(PlaybackSession.is_active, PlaybackSession.start_time < cutoff_time)
                 .all()
             )
 

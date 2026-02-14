@@ -3,6 +3,6 @@
 Initialisation des routes API
 """
 
-from app.api.routes import analytics, dashboard, jellyseerr, services, sync
+from app.api.routes import analytics, dashboard, jellyseerr, library, services, sync
 
-__all__ = ["dashboard", "services", "sync", "jellyseerr", "analytics"]
+__all__ = ["dashboard", "services", "sync", "jellyseerr", "analytics", "library"]
