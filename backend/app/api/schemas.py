@@ -95,6 +95,30 @@ class DashboardStatisticResponse(BaseModel):
         from_attributes = True
 
 
+# Monitoring Schemas
+class MonitoringSeasonInfo(BaseModel):
+    number: int
+    episodes: int
+    monitored: int
+    available: int
+    is_monitored: bool
+
+
+class MonitoringItemResponse(BaseModel):
+    id: str
+    title: str
+    year: int
+    service: str
+    monitoring_status: str
+    availability_status: str
+    quality_profile: str
+    last_updated: datetime
+    file_size: str
+    image_url: str
+    seasons: list[MonitoringSeasonInfo] = []
+    download_history: list = []
+
+
 # Season & Episode Schemas
 class SeasonResponse(BaseModel):
     id: str
