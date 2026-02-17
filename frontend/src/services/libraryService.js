@@ -52,16 +52,31 @@ export const getLibraryItems = async (
  * @returns {Promise<Object|null>} Media detail object or null
  */
 export const getLibraryItemById = async (id) => {
-try {
-    const response = await pilotarrClient?.get(
-      `/library/${id}`,
-    );
+  try {
+    const response = await pilotarrClient?.get(`/library/${id}`);
     return response?.data || [];
   } catch (error) {
     console.error("Error fetching library items:", error?.message);
     return null;
   }
-}
+};
+
+/**
+ * Get all seasons with embedded episodes for a TV show (single request)
+ * @param {string} id - Library item ID
+ * @returns {Promise<Array>} Array of seasons with episodes
+ */
+export const getSeasonsWithEpisodes = async (id) => {
+  try {
+    const response = await pilotarrClient?.get(
+      `/library/${id}/seasons-with-episodes`,
+    );
+    return response?.data || [];
+  } catch (error) {
+    console.error("Error fetching seasons with episodes:", error?.message);
+    return [];
+  }
+};
 
 /**
  * Get detailed information for a specific media item

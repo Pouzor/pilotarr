@@ -149,6 +149,29 @@ class EpisodeResponse(BaseModel):
         from_attributes = True
 
 
+class EpisodeDetailResponse(BaseModel):
+    episode_number: int
+    title: str | None = None
+    air_date: date | None = None
+    monitored: bool
+    has_file: bool
+    download_status: str  # "downloaded" | "missing"
+    file_size_str: str | None = None  # e.g. "2.1 GB"
+    quality_profile: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class SeasonWithEpisodesResponse(BaseModel):
+    season_number: int
+    is_monitored: bool
+    episode_count: int
+    episode_file_count: int
+    total_episode_count: int
+    episodes: list[EpisodeDetailResponse] = []
+
+
 # Library Item Schemas
 class LibraryItemResponse(BaseModel):
     id: str

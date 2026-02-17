@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.schemas import EpisodeResponse, LibraryItemResponse, SeasonResponse
+from app.api.schemas import (
+    EpisodeDetailResponse,
+    EpisodeResponse,
+    LibraryItemResponse,
+    SeasonResponse,
+    SeasonWithEpisodesResponse,
+)
 from app.db import get_db
 from app.models import Episode, LibraryItem, MediaType, Season
 from app.models.enums import ItemSortBy
@@ -136,3 +142,58 @@ async def get_season_episodes(id: str, season_number: int, db: Session = Depends
     episodes = db.query(Episode).filter(Episode.season_id == season.id).order_by(Episode.episode_number).all()
 
     return episodes
+
+
+def _format_bytes(size: int | None) -> str | None:
+    if not size:
+        return None
+    units = ("B", "KB", "MB", "GB", "TB")
+    for unit in units[:-1]:
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
+@router.get("/{id}/seasons-with-episodes", response_model=list[SeasonWithEpisodesResponse])
+async def get_seasons_with_episodes(id: str, db: Session = Depends(get_db)):
+    """All seasons with embedded episodes — single request for the detail page."""
+    item = db.query(LibraryItem).filter(LibraryItem.id == id).first()
+    if not item or item.media_type != MediaType.TV:
+        raise HTTPException(status_code=404, detail="TV series not found")
+
+    seasons = (
+        db.query(Season)
+        .filter(Season.library_item_id == id)
+        .options(selectinload(Season.episodes))
+        .order_by(Season.season_number)
+        .all()
+    )
+
+    result = []
+    for season in seasons:
+        eps = sorted(season.episodes, key=lambda e: e.episode_number)
+        result.append(
+            SeasonWithEpisodesResponse(
+                season_number=season.season_number,
+                is_monitored=season.monitored,
+                episode_count=season.episode_count,
+                episode_file_count=season.episode_file_count,
+                total_episode_count=season.total_episode_count,
+                episodes=[
+                    EpisodeDetailResponse(
+                        episode_number=ep.episode_number,
+                        title=ep.title,
+                        air_date=ep.air_date,
+                        monitored=ep.monitored,
+                        has_file=ep.has_file,
+                        download_status="downloaded" if ep.has_file else "missing",
+                        file_size_str=_format_bytes(ep.file_size),
+                        quality_profile=ep.quality_profile,
+                    )
+                    for ep in eps
+                ],
+            )
+        )
+
+    return result

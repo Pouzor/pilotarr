@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import Button from '../../components/ui/Button';
-import HeroBanner from './components/HeroBanner';
-import MetadataPanel from './components/MetadataPanel';
-import EpisodesList from './components/EpisodesList';
-import FileInfoPanel from './components/FileInfoPanel';
-import { getLibraryItemById } from '../../services/libraryService';
+import Button from "../../components/ui/Button";
+import HeroBanner from "./components/HeroBanner";
+import MetadataPanel from "./components/MetadataPanel";
+import EpisodesList from "./components/EpisodesList";
+import FileInfoPanel from "./components/FileInfoPanel";
+import {
+  getLibraryItemById,
+  getSeasonsWithEpisodes,
+} from "../../services/libraryService";
 
 const MediaDetail = () => {
   const navigate = useNavigate();
@@ -24,219 +27,65 @@ const MediaDetail = () => {
 
         const data = await getLibraryItemById(id);
 
-        console.log(data);
+        const seasonsData =
+          data.media_type === "tv" ? await getSeasonsWithEpisodes(id) : [];
 
-        // TODO: adapter `data` au format attendu par tes sous-composants.
-        // Pour l'instant, je garde ton mock pour ne pas casser l'UI.
+        const torrent = data.torrent_info?.[0] || {};
+
+        const downloadedEpisodes = seasonsData.reduce(
+          (s, se) => s + se.episode_file_count,
+          0,
+        );
+        const totalEpisodes = seasonsData.reduce(
+          (s, se) => s + se.total_episode_count,
+          0,
+        );
+
         const media = {
           id: data.id,
           title: data.title,
           mediaType: data.media_type,
           year: data.year,
           rating: data.rating,
-          runtime: '49 min',
-          genres: ['Crime', 'Drama', 'Thriller'],
+          runtime: null,
+          genres: [],
           overview: data.description,
           image: data.image_url,
           backdropImage: data.image_url,
-          status: 'Ended',
-          network: 'AMC',
+          status: null,
+          network: null,
           nbMedia: data.nb_media,
 
-          // File Information
           fileInfo: {
-            path: '/media/tv/Breaking Bad',
             size: data.size,
-            quality: '1080p BluRay',
-            videoCodec: 'x264',
-            audioCodec: 'AC3 5.1',
-            container: 'MKV',
-            subtitles: [
-              { language: 'English', format: 'SRT', forced: false },
-              { language: 'Spanish', format: 'SRT', forced: false },
-              { language: 'French', format: 'SRT', forced: false },
-            ],
-
-            torrentInfo: {
-              client: 'qBittorrent',
-              seedRatio: data.torrent_info[0].ratio,
-              status: data.torrent_info[0].status,
-            },
+            torrentInfo: { seedRatio: torrent.ratio, status: torrent.status },
           },
 
-          // Monitoring Status
-          monitored: true,
-          downloadedEpisodes: 62,
-          totalEpisodes: 62,
-          missingEpisodes: 0,
+          monitored: seasonsData.some((s) => s.is_monitored),
+          downloadedEpisodes,
+          totalEpisodes,
+          missingEpisodes: totalEpisodes - downloadedEpisodes,
 
-          // Seasons and Episodes
-          seasons: [
-            {
-              seasonNumber: 1,
-              episodeCount: 7,
-              episodes: [
-                {
-                  episodeNumber: 1,
-                  title: 'Pilot',
-                  airDate: '2008-01-20',
-                  overview:
-                    'When an unassuming high school chemistry teacher discovers he has a rare form of lung cancer, he decides to team up with a former student and create a top of the line crystal meth.',
-                  runtime: 58,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.1 GB',
-                  quality: '1080p BluRay',
-                  watched: true,
-                },
-                {
-                  episodeNumber: 2,
-                  title: "Cat's in the Bag...",
-                  airDate: '2008-01-27',
-                  overview:
-                    "Walt and Jesse attempt to tie up loose ends. The desperate situation gets more complicated with the flip of a coin. Walt's wife, Skyler, becomes suspicious of Walt's strange behavior.",
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '1.9 GB',
-                  quality: '1080p BluRay',
-                  watched: true,
-                },
-                {
-                  episodeNumber: 3,
-                  title: "...And the Bag's in the River",
-                  airDate: '2008-02-10',
-                  overview:
-                    'Walter fights with Jesse over his drug use, causing him to leave Walter alone with their captive, Krazy-8. Meanwhile, Hank has a scared straight moment with Walter Jr. after his aunt discovers he has been smoking pot.',
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.0 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-                {
-                  episodeNumber: 4,
-                  title: 'Cancer Man',
-                  airDate: '2008-02-17',
-                  overview:
-                    'Walter finally tells his family that he has been stricken with cancer. Meanwhile, the DEA believes Albuquerque has a new, big time player to worry about. Meanwhile, a worthy recipient is the target of a depressed Walter\'s anger.',
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '1.8 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-                {
-                  episodeNumber: 5,
-                  title: 'Gray Matter',
-                  airDate: '2008-02-24',
-                  overview:
-                    "Walter and Skyler attend a former colleague's party. Jesse tries to free himself from the drugs, while Skyler organizes an intervention.",
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.0 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-                {
-                  episodeNumber: 6,
-                  title: "Crazy Handful of Nothin'",
-                  airDate: '2008-03-02',
-                  overview:
-                    'The side effects of chemo begin to plague Walt. Meanwhile, the DEA rounds up suspected dealers.',
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '1.9 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-                {
-                  episodeNumber: 7,
-                  title: 'A No-Rough-Stuff-Type Deal',
-                  airDate: '2008-03-09',
-                  overview:
-                    "Walter accepts his new identity as a drug dealer after a PTA meeting. Elsewhere, Jesse decides to put his aunt's house on the market and Skyler is the recipient of a baby shower.",
-                  runtime: 48,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.1 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-              ],
-            },
-            {
-              seasonNumber: 2,
-              episodeCount: 13,
-              episodes: [
-                {
-                  episodeNumber: 1,
-                  title: 'Seven Thirty-Seven',
-                  airDate: '2009-03-08',
-                  overview:
-                    'Walt and Jesse realize how dire their situation is. They must come up with a plan to kill Tuco before Tuco kills them first.',
-                  runtime: 47,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.0 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-                {
-                  episodeNumber: 2,
-                  title: 'Grilled',
-                  airDate: '2009-03-15',
-                  overview:
-                    "Walt and Jesse are vividly reminded of Tuco's volatile nature, and try to figure a way out of their business partnership.",
-                  runtime: 47,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '1.9 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-              ],
-            },
-            {
-              seasonNumber: 3,
-              episodeCount: 13,
-              episodes: [
-                {
-                  episodeNumber: 1,
-                  title: 'No Más',
-                  airDate: '2010-03-21',
-                  overview:
-                    'Walt faces a new threat on a new front and deals with an increasingly angry Skyler, who must consider what to do next with her life and the kids.',
-                  runtime: 47,
-                  downloaded: true,
-                  monitored: true,
-                  hasSubtitles: true,
-                  fileSize: '2.1 GB',
-                  quality: '1080p BluRay',
-                  watched: false,
-                },
-              ],
-            },
-          ],
+          seasons: seasonsData.map((s) => ({
+            seasonNumber: s.season_number,
+            episodes: s.episodes.map((ep) => ({
+              episodeNumber: ep.episode_number,
+              title: ep.title,
+              airDate: ep.air_date,
+              monitored: ep.monitored,
+              downloaded: ep.has_file,
+              downloadStatus: ep.download_status,
+              fileSize: ep.file_size_str,
+              quality: ep.quality_profile,
+              hasSubtitles: false,
+              watched: false,
+            })),
+          })),
         };
 
-        // Pour le moment, on ignore `data` et on affiche le mock
         setMedia(media);
       } catch (error) {
-        console.error('Failed to fetch media detail', error);
+        console.error("Failed to fetch media detail", error);
       } finally {
         setLoading(false);
       }
@@ -276,7 +125,7 @@ const MediaDetail = () => {
           variant="ghost"
           size="sm"
           iconName="ArrowLeft"
-          onClick={() => navigate('/library')}
+          onClick={() => navigate("/library")}
         >
           Back to Library
         </Button>
@@ -295,7 +144,7 @@ const MediaDetail = () => {
         </div>
 
         {/* Episodes List (TV Shows Only) */}
-        {media?.mediaType === 'tv' && media?.seasons && (
+        {media?.mediaType === "tv" && media?.seasons && (
           <EpisodesList seasons={media.seasons} />
         )}
       </div>
