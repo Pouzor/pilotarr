@@ -243,6 +243,14 @@ class SyncService:
                     if size_bytes > 0:
                         size_gb = round(size_bytes / (1024**3), 1)
                         existing.size = f"{size_gb} GB"
+                    # Repopulate added_date if missing (e.g. after migration from TEXT)
+                    if existing.added_date is None:
+                        raw = movie.get("added", "")
+                        if raw:
+                            try:
+                                existing.added_date = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                            except (ValueError, TypeError):
+                                pass
                 else:
                     # Calculer la taille
                     size_bytes = movie.get("sizeOnDisk", 0)
@@ -503,6 +511,14 @@ class SyncService:
                     if size_bytes > 0:
                         size_gb = round(size_bytes / (1024**3), 1)
                         existing.size = f"{size_gb} GB"
+                    # Repopulate added_date if missing (e.g. after migration from TEXT)
+                    if existing.added_date is None:
+                        raw = series.get("added", "")
+                        if raw:
+                            try:
+                                existing.added_date = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                            except (ValueError, TypeError):
+                                pass
                 else:
                     size_bytes = series.get("statistics", {}).get("sizeOnDisk", 0)
                     size_gb = round(size_bytes / (1024**3), 1)
