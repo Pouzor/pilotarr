@@ -15,8 +15,10 @@ const MediaCard = ({ item }) => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "Unknown";
     const date = new Date(dateString);
-    return date?.toLocaleDateString("en-US", {
+    if (isNaN(date.getTime())) return "Unknown";
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",

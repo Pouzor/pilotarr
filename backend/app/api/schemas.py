@@ -183,7 +183,7 @@ class LibraryItemResponse(BaseModel):
     quality: str
     rating: str | None = None
     description: str | None = None
-    added_date: str
+    added_date: datetime | None = None
     size: str
     torrent_info: list[dict[str, Any]] = []
     torrent_count: int = 0

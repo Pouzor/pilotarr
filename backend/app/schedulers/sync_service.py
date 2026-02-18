@@ -250,11 +250,12 @@ class SyncService:
 
                     # Date d'ajout
                     added_date = movie.get("added", "")
+                    added_dt = None
                     if added_date:
-                        added_dt = datetime.fromisoformat(added_date.replace("Z", "+00:00"))
-                        time_ago = self._format_time_ago(added_dt)
-                    else:
-                        time_ago = "Unknown"
+                        try:
+                            added_dt = datetime.fromisoformat(added_date.replace("Z", "+00:00"))
+                        except (ValueError, TypeError):
+                            pass
 
                     # Récupérer l'image
                     image_url = ""
@@ -275,7 +276,7 @@ class SyncService:
                         quality=str(movie.get("qualityProfileId", "Unknown")),
                         rating=str(movie.get("ratings", {}).get("imdb", {}).get("value", "")),
                         description=movie.get("overview", ""),
-                        added_date=time_ago,
+                        added_date=added_dt,
                         size=f"{size_gb} GB",
                         torrent_hash=torrent_hash,
                         nb_media=nb_media,
@@ -507,11 +508,12 @@ class SyncService:
                     size_gb = round(size_bytes / (1024**3), 1)
 
                     added_date = series.get("added", "")
+                    added_dt = None
                     if added_date:
-                        added_dt = datetime.fromisoformat(added_date.replace("Z", "+00:00"))
-                        time_ago = self._format_time_ago(added_dt)
-                    else:
-                        time_ago = "Unknown"
+                        try:
+                            added_dt = datetime.fromisoformat(added_date.replace("Z", "+00:00"))
+                        except (ValueError, TypeError):
+                            pass
 
                     # Récupérer l'image
                     image_url = ""
@@ -532,7 +534,7 @@ class SyncService:
                         quality=str(series.get("qualityProfileId", "Unknown")),
                         rating=str(series.get("ratings", {}).get("value", "")),
                         description=series.get("overview", ""),
-                        added_date=time_ago,
+                        added_date=added_dt,
                         size=f"{size_gb} GB",
                         torrent_hash=first_hash,
                         nb_media=nb_media,

@@ -101,7 +101,7 @@ class LibraryItem(Base):
     quality = Column(Text, nullable=False)
     rating = Column(Text)
     description = Column(Text)
-    added_date = Column(Text, nullable=False)
+    added_date = Column(DateTime(timezone=True), nullable=True)
     size = Column(Text, nullable=False)
     torrent_hash = Column(String(255), nullable=True, index=True)
     torrent_info = Column(JSON, nullable=True)

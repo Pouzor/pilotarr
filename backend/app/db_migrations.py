@@ -69,6 +69,14 @@ def create_analytics_tables():
             print(f"❌ Erreur lors de la migration des torrents : {e}")
             return False
 
+    # Migrate added_date column from TEXT to DATETIME
+    if "library_items" in get_existing_tables():
+        try:
+            migrate_added_date_column()
+        except Exception as e:
+            print(f"❌ Erreur lors de la migration de added_date : {e}")
+            return False
+
     return True
 
 
@@ -116,6 +124,45 @@ def migrate_torrent_hashes():
 
         db.commit()
         print(f"✅ {len(rows)} torrents migrés avec succès")
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+
+def migrate_added_date_column():
+    """Migrate library_items.added_date from TEXT to DATETIME NULL.
+
+    Existing human-readable strings ("5 days ago", "just now", etc.) cannot be
+    converted to DATETIME, so we null them out first. The next sync will populate
+    real datetime values.
+    """
+    from sqlalchemy import text
+
+    from app.db import SessionLocal
+
+    inspector = inspect(engine)
+    columns = {col["name"]: col for col in inspector.get_columns("library_items")}
+    if "added_date" not in columns:
+        print("⚠️  added_date column not found in library_items, skipping migration")
+        return
+
+    col_type = str(columns["added_date"]["type"]).upper()
+    if "TEXT" not in col_type and "VARCHAR" not in col_type and "LONGTEXT" not in col_type:
+        print("✅ added_date is already a non-text type, skipping migration")
+        return
+
+    print("🔄 Migrating library_items.added_date from TEXT → DATETIME ...")
+    db = SessionLocal()
+    try:
+        # Null out existing stale strings so ALTER doesn't fail in strict mode
+        db.execute(text("UPDATE library_items SET added_date = NULL"))
+        db.commit()
+        # Change column type
+        db.execute(text("ALTER TABLE library_items MODIFY COLUMN added_date DATETIME NULL"))
+        db.commit()
+        print("✅ added_date column migrated to DATETIME NULL (existing rows nulled — re-sync to repopulate)")
     except Exception as e:
         db.rollback()
         raise e
