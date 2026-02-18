@@ -97,8 +97,8 @@ class TorrentEnrichmentService:
             if not connector:
                 return {"total": 0, "success": 0, "failed": 0, "error": "qBittorrent non configuré"}
 
-            # === Phase A: Enrich individual torrent rows ===
-            torrent_rows_query = self.db.query(LibraryItemTorrent).filter(LibraryItemTorrent.torrent_info.is_(None))
+            # === Phase A: Enrich individual torrent rows (always refresh, not just NULL) ===
+            torrent_rows_query = self.db.query(LibraryItemTorrent)
             if limit:
                 torrent_rows_query = torrent_rows_query.limit(limit)
 
@@ -283,11 +283,10 @@ class TorrentEnrichmentService:
             if not connector:
                 return {"total": 0, "success": 0, "failed": 0, "error": "qBittorrent non configuré"}
 
-            # Phase A: enrich recent torrent rows
+            # Phase A: enrich recent torrent rows (always refresh, not just NULL)
             torrent_rows = (
                 self.db.query(LibraryItemTorrent)
                 .filter(
-                    LibraryItemTorrent.torrent_info.is_(None),
                     LibraryItemTorrent.created_at >= cutoff_date,
                 )
                 .all()
