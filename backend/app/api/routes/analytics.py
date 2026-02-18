@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import and_, desc, func
+from sqlalchemy import and_, asc, case, desc, func
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
@@ -24,11 +24,10 @@ from app.api.schemas import (
 from app.core.config import settings
 from app.core.security import verify_api_key
 from app.db import get_db
-from app.models.enums import MediaType, ServiceType
+from app.models.enums import MediaType, PlaybackMethod, ServiceType, SessionStatus
 from app.models.models import (
     DailyAnalytic,
     LibraryItem,
-    MediaStatistic,
     PlaybackSession,
     ServerMetric,
     ServiceConfiguration,
@@ -325,47 +324,89 @@ async def get_media_playback_analytics(
     Retourne la liste des médias avec leurs statistiques
     """
     try:
-        # Construire la requête
-        query = db.query(MediaStatistic)
+        from collections import defaultdict
 
-        # Tri
-        if sort_by == "plays":
-            query = query.order_by(desc(MediaStatistic.total_plays) if order == "desc" else MediaStatistic.total_plays)
-        elif sort_by == "duration":
-            query = query.order_by(
-                desc(MediaStatistic.total_watched_seconds) if order == "desc" else MediaStatistic.total_watched_seconds
+        order_fn = desc if order == "desc" else asc
+
+        total_plays_col = func.count(PlaybackSession.id)
+        total_watched_col = func.coalesce(func.sum(PlaybackSession.watched_seconds), 0)
+        last_played_col = func.max(PlaybackSession.end_time)
+
+        sort_col_map = {
+            "plays": total_plays_col,
+            "duration": total_watched_col,
+            "last_played": last_played_col,
+        }
+        sort_col = sort_col_map.get(sort_by, total_plays_col)
+
+        rows = (
+            db.query(
+                PlaybackSession.media_id,
+                func.max(PlaybackSession.media_title).label("media_title"),
+                func.max(PlaybackSession.media_type).label("media_type"),
+                func.max(PlaybackSession.poster_url).label("poster_url"),
+                total_plays_col.label("total_plays"),
+                total_watched_col.label("total_watched_seconds"),
+                func.sum(case((PlaybackSession.playback_method == PlaybackMethod.DIRECT_PLAY, 1), else_=0)).label(
+                    "direct_play_count"
+                ),
+                func.sum(case((PlaybackSession.playback_method == PlaybackMethod.TRANSCODED, 1), else_=0)).label(
+                    "transcoded_count"
+                ),
+                last_played_col.label("last_played_at"),
             )
-        elif sort_by == "last_played":
-            query = query.order_by(
-                desc(MediaStatistic.last_played_at) if order == "desc" else MediaStatistic.last_played_at
+            .filter(PlaybackSession.status == SessionStatus.STOPPED)
+            .group_by(PlaybackSession.media_id)
+            .order_by(order_fn(sort_col))
+            .limit(limit)
+            .all()
+        )
+
+        # Derive most-used quality per media_id via a second grouped query
+        media_ids = [row.media_id for row in rows]
+        quality_map: dict[str, str] = {}
+        if media_ids:
+            quality_rows = (
+                db.query(
+                    PlaybackSession.media_id,
+                    PlaybackSession.video_quality,
+                    func.count(PlaybackSession.id).label("cnt"),
+                )
+                .filter(
+                    PlaybackSession.media_id.in_(media_ids),
+                    PlaybackSession.status == SessionStatus.STOPPED,
+                )
+                .group_by(PlaybackSession.media_id, PlaybackSession.video_quality)
+                .all()
             )
+            quality_counts: dict[str, dict] = defaultdict(dict)
+            for qr in quality_rows:
+                quality_counts[qr.media_id][qr.video_quality] = qr.cnt
+            for mid, counts in quality_counts.items():
+                best = max(counts, key=counts.__getitem__)
+                quality_map[mid] = best.value if hasattr(best, "value") else str(best)
 
-        media_stats = query.limit(limit).all()
-
-        # Formater les résultats
         results = []
-        for stat in media_stats:
-            # Formater la durée (ex: "2h 28m")
-            hours = stat.total_watched_seconds // 3600
-            minutes = (stat.total_watched_seconds % 3600) // 60
+        for row in rows:
+            total_secs = row.total_watched_seconds or 0
+            hours = total_secs // 3600
+            minutes = (total_secs % 3600) // 60
             duration_str = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
 
-            # Déterminer le status
-            status_str = "Direct" if stat.direct_play_count > stat.transcoded_count else "Transcoded"
-
-            # Qualité
-            quality_str = stat.most_used_quality.value if stat.most_used_quality else "Unknown"
+            direct = row.direct_play_count or 0
+            transcoded = row.transcoded_count or 0
+            status_str = "Direct" if direct >= transcoded else "Transcoded"
 
             results.append(
                 MediaPlaybackAnalyticsItem(
-                    media_title=stat.media_title,
-                    media_type=stat.media_type,
-                    plays=stat.total_plays,
+                    media_title=row.media_title,
+                    media_type=row.media_type,
+                    plays=row.total_plays,
                     duration=duration_str,
-                    quality=quality_str,
+                    quality=quality_map.get(row.media_id, "Unknown"),
                     status=status_str,
-                    poster_url=stat.poster_url,
-                    last_played_at=stat.last_played_at,
+                    poster_url=row.poster_url,
+                    last_played_at=row.last_played_at,
                 )
             )
 

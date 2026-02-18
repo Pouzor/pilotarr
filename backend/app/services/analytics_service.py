@@ -10,7 +10,7 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from app.models.enums import DeviceType, MediaType, PlaybackMethod, SessionStatus, VideoQuality
-from app.models.models import DailyAnalytic, DeviceStatistic, MediaStatistic, PlaybackSession
+from app.models.models import DailyAnalytic, DeviceStatistic, PlaybackSession
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,6 @@ class AnalyticsService:
             logger.info(f"✅ Session arrêtée : {session.id} - {session.media_title}")
 
             # Mettre à jour les statistiques
-            AnalyticsService.update_media_statistics(db, session)
             AnalyticsService.update_daily_analytics(db, session)
 
             return session
@@ -262,55 +261,6 @@ class AnalyticsService:
             db.rollback()
             logger.error(f"❌ Erreur lors de la reprise : {e}")
             raise
-
-    @staticmethod
-    def update_media_statistics(db: Session, session: PlaybackSession):
-        """Met à jour les statistiques du média après une session"""
-        try:
-            # Récupérer ou créer les stats du média
-            media_stat = db.query(MediaStatistic).filter(MediaStatistic.media_id == session.media_id).first()
-
-            if not media_stat:
-                media_stat = MediaStatistic(
-                    media_id=session.media_id,
-                    media_title=session.media_title,
-                    media_type=session.media_type,
-                    media_year=session.media_year,
-                    poster_url=session.poster_url,
-                    total_plays=0,
-                    total_duration_seconds=session.duration_seconds or 0,
-                    total_watched_seconds=0,
-                    unique_users=0,
-                    direct_play_count=0,
-                    transcoded_count=0,
-                    first_played_at=session.start_time,
-                )
-                db.add(media_stat)
-
-            # Mettre à jour les compteurs
-            media_stat.total_plays += 1
-            media_stat.total_watched_seconds += session.watched_seconds
-            media_stat.last_played_at = session.end_time or datetime.now(UTC)
-
-            if session.playback_method == PlaybackMethod.DIRECT_PLAY:
-                media_stat.direct_play_count += 1
-            elif session.playback_method == PlaybackMethod.TRANSCODED:
-                media_stat.transcoded_count += 1
-
-            # Calculer les utilisateurs uniques
-            unique_users_count = (
-                db.query(func.count(func.distinct(PlaybackSession.user_id)))
-                .filter(PlaybackSession.media_id == session.media_id)
-                .scalar()
-            )
-            media_stat.unique_users = unique_users_count
-
-            db.commit()
-            logger.info(f"📊 Stats média mises à jour : {media_stat.media_title}")
-
-        except Exception as e:
-            db.rollback()
-            logger.error(f"❌ Erreur lors de la mise à jour des stats média : {e}")
 
     @staticmethod
     def update_daily_analytics(db: Session, session: PlaybackSession):

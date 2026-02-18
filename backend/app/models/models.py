@@ -314,44 +314,7 @@ class PlaybackSession(Base):
     )
 
 
-# Table 8: Media Statistics (Agrégation des statistiques par média)
-class MediaStatistic(Base):
-    """Statistiques agrégées par média"""
-
-    __tablename__ = "media_statistics"
-
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-
-    # Identification du média
-    media_id = Column(String(255), unique=True, nullable=False, index=True)
-    media_title = Column(Text, nullable=False)
-    media_type = Column(SQLEnum(MediaType), nullable=False, index=True)
-    media_year = Column(Integer)
-    poster_url = Column(Text)
-
-    # Statistiques de visionnage
-    total_plays = Column(Integer, default=0, index=True)
-    total_duration_seconds = Column(Integer, default=0)  # Durée totale du média
-    total_watched_seconds = Column(Integer, default=0)  # Temps total regardé par tous les users
-    unique_users = Column(Integer, default=0)  # Nombre d'utilisateurs uniques
-
-    # Qualité la plus utilisée
-    most_used_quality = Column(SQLEnum(VideoQuality))
-
-    # Méthode de lecture dominante
-    direct_play_count = Column(Integer, default=0)
-    transcoded_count = Column(Integer, default=0)
-
-    # Timestamps
-    last_played_at = Column(DateTime(timezone=True), index=True)
-    first_played_at = Column(DateTime(timezone=True))
-
-    # Métadonnées
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-
-# Table 9: Device Statistics (Agrégation par type d'appareil)
+# Table 8: Device Statistics (Agrégation par type d'appareil)
 class DeviceStatistic(Base):
     """Statistiques agrégées par type d'appareil sur une période"""
 

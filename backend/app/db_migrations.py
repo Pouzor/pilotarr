@@ -29,7 +29,6 @@ def create_analytics_tables():
 
     new_tables = [
         "playback_sessions",
-        "media_statistics",
         "device_statistics",
         "daily_analytics",
         "server_metrics",

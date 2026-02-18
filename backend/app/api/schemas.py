@@ -338,32 +338,6 @@ class WebhookPayload(BaseModel):
     data: WebhookPlaybackData
 
 
-# Media Statistics Schemas
-class MediaStatisticResponse(BaseModel):
-    """Schéma de réponse pour les statistiques d'un média"""
-
-    id: str
-    media_id: str
-    media_title: str
-    media_type: MediaType
-    media_year: int | None = None
-    poster_url: str | None = None
-    total_plays: int
-    total_duration_seconds: int
-    total_watched_seconds: int
-    unique_users: int
-    most_used_quality: VideoQuality | None = None
-    direct_play_count: int
-    transcoded_count: int
-    last_played_at: datetime | None = None
-    first_played_at: datetime | None = None
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 # Device Statistics Schemas
 class DeviceStatisticResponse(BaseModel):
     """Schéma de réponse pour les statistiques par appareil"""
