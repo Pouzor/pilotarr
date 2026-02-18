@@ -416,6 +416,7 @@ class MediaPlaybackAnalyticsItem(BaseModel):
     media_title: str
     media_type: MediaType
     episode_info: str | None = None
+    series_name: str | None = None
     plays: int
     duration: str  # Format: "2h 28m"
     quality: str

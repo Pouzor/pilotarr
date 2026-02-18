@@ -121,8 +121,9 @@ const JellyfinStatistics = () => {
       // Transform API response to component format
       const transformedData =
         data?.map((item) => ({
-          title: item?.media_title || "Unknown",
+          title: item?.series_name || item?.media_title || "Unknown",
           episodeInfo: item?.episode_info || null,
+          lastPlayedAt: item?.last_played_at || null,
           thumbnail:
             item?.poster_url ||
             "https://images.unsplash.com/photo-1574267432644-f610f5b7e4d1",

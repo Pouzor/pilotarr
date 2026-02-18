@@ -346,6 +346,7 @@ async def get_media_playback_analytics(
                 func.max(PlaybackSession.media_type).label("media_type"),
                 func.max(PlaybackSession.episode_info).label("episode_info"),
                 func.max(PlaybackSession.poster_url).label("poster_url"),
+                func.max(LibraryItem.title).label("series_name"),
                 total_plays_col.label("total_plays"),
                 total_watched_col.label("total_watched_seconds"),
                 func.sum(case((PlaybackSession.playback_method == PlaybackMethod.DIRECT_PLAY, 1), else_=0)).label(
@@ -356,6 +357,7 @@ async def get_media_playback_analytics(
                 ),
                 last_played_col.label("last_played_at"),
             )
+            .outerjoin(LibraryItem, PlaybackSession.library_item_id == LibraryItem.id)
             .filter(PlaybackSession.status == SessionStatus.STOPPED)
             .group_by(PlaybackSession.media_id)
             .order_by(order_fn(sort_col))
@@ -403,6 +405,7 @@ async def get_media_playback_analytics(
                     media_title=row.media_title,
                     media_type=row.media_type,
                     episode_info=row.episode_info,
+                    series_name=row.series_name,
                     plays=row.total_plays,
                     duration=duration_str,
                     quality=quality_map.get(row.media_id, "Unknown"),

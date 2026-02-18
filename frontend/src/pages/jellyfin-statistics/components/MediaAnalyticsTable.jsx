@@ -4,7 +4,7 @@ import Image from "../../../components/AppImage";
 
 const MediaAnalyticsTable = ({ data, isLoading }) => {
   const [sortConfig, setSortConfig] = useState({
-    key: "plays",
+    key: "lastPlayedAt",
     direction: "desc",
   });
 
