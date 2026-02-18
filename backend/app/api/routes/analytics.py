@@ -318,11 +318,6 @@ async def get_media_playback_analytics(
     db: Session = Depends(get_db),
     api_key: str = Depends(verify_api_key),
 ):
-    """
-    📊 VUE 2 : Media Playback Analytics - Tableau détaillé
-
-    Retourne la liste des médias avec leurs statistiques
-    """
     try:
         from collections import defaultdict
 
@@ -358,7 +353,6 @@ async def get_media_playback_analytics(
                 last_played_col.label("last_played_at"),
             )
             .outerjoin(LibraryItem, PlaybackSession.library_item_id == LibraryItem.id)
-            .filter(PlaybackSession.status == SessionStatus.STOPPED)
             .group_by(PlaybackSession.media_id)
             .order_by(order_fn(sort_col))
             .limit(limit)
