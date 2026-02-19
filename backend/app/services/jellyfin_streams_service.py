@@ -61,7 +61,7 @@ class JellyfinStreamsService:
         if not config:
             print("⚠️  Jellyfin non configuré, skip sync des streams")
             return None
-        return JellyfinConnector(base_url=config.url, api_key=config.api_key)
+        return JellyfinConnector(base_url=config.url, api_key=config.api_key, port=config.port)
 
     async def sync_movie_streams(self) -> dict[str, int]:
         """Sync media_streams for all movies in LibraryItem."""
