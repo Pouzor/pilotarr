@@ -6,6 +6,7 @@ import CalendarGrid from "./components/CalendarGrid";
 import EventSidebar from "./components/EventSidebar";
 import ViewToolbar from "./components/ViewToolbar";
 import { getCalendarEvents } from "../../services/calendarService";
+import { getPlaybackSessions } from "../../services/analyticsService";
 
 const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -13,6 +14,7 @@ const Calendar = () => {
   const [eventFilters, setEventFilters] = useState({
     tvReleases: true,
     movieReleases: true,
+    views: true,
   });
   const [events, setEvents] = useState([]);
   const [selectedDateEvents, setSelectedDateEvents] = useState([]);
@@ -27,8 +29,24 @@ const Calendar = () => {
     const end = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
     setIsLoading(true);
-    getCalendarEvents(start, end).then((data) => {
-      setEvents(data);
+    Promise.all([
+      getCalendarEvents(start, end),
+      getPlaybackSessions(start, end),
+    ]).then(([releases, sessions]) => {
+      // Map playback sessions to calendar event shape
+      const viewEvents = sessions.map((s) => ({
+        id: `session-${s.id}`,
+        title: s.media_title,
+        type: s.media_type,
+        eventType: "view",
+        releaseDate: s.start_time.split("T")[0],
+        imageUrl: s.poster_url || "",
+        imageAlt: `${s.media_title} poster`,
+        episode: s.episode_info || null,
+        status: "available",
+        viewedBy: s.user_name,
+      }));
+      setEvents([...releases, ...viewEvents]);
       setIsLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,7 +68,6 @@ const Calendar = () => {
 
       if (!matchesDate) return false;
 
-      // Apply event type filters
       if (
         event?.eventType === "release" &&
         event?.type === "tv" &&
@@ -63,6 +80,7 @@ const Calendar = () => {
         !eventFilters?.movieReleases
       )
         return false;
+      if (event?.eventType === "view" && !eventFilters?.views) return false;
 
       return true;
     });

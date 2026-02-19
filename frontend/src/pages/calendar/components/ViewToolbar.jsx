@@ -95,6 +95,16 @@ const ViewToolbar = ({
               <span className="text-sm text-foreground">Movie Releases</span>
             </div>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={eventFilters?.views}
+              onChange={() => handleFilterChange("views")}
+            />
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+              <span className="text-sm text-foreground">Viewing Activity</span>
+            </div>
+          </label>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import traceback
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -18,6 +18,7 @@ from app.api.schemas import (
     ActiveSessionItem,
     DeviceBreakdownItem,
     MediaPlaybackAnalyticsItem,
+    PlaybackSessionResponse,
     ServerPerformanceResponse,
     UsageAnalyticsResponse,
 )
@@ -540,3 +541,31 @@ async def get_server_metrics(db: Session = Depends(get_db), api_key: str = Depen
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur"
         ) from e
+
+
+@router.get("/sessions", response_model=list[PlaybackSessionResponse])
+async def get_sessions(
+    start: date | None = Query(default=None, description="Start date YYYY-MM-DD"),
+    end: date | None = Query(default=None, description="End date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+):
+    """Récupérer les sessions de lecture pour une plage de dates"""
+    today = date.today()
+    start_date = start or (today - timedelta(days=30))
+    end_date = end or today
+
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt = datetime.combine(end_date, datetime.max.time())
+
+    sessions = (
+        db.query(PlaybackSession)
+        .filter(
+            PlaybackSession.start_time >= start_dt,
+            PlaybackSession.start_time <= end_dt,
+            PlaybackSession.is_active.is_(False),
+        )
+        .order_by(PlaybackSession.start_time.desc())
+        .all()
+    )
+
+    return sessions

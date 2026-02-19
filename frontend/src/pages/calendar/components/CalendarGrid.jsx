@@ -60,6 +60,7 @@ const CalendarGrid = ({
         !eventFilters?.movieReleases
       )
         return false;
+      if (event?.eventType === "view" && !eventFilters?.views) return false;
 
       return true;
     });
@@ -179,6 +180,10 @@ const CalendarGrid = ({
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
             <span className="text-muted-foreground">Movie Release</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+            <span className="text-muted-foreground">Viewing Activity</span>
           </div>
         </div>
       </div>

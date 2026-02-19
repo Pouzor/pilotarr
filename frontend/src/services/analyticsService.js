@@ -1,4 +1,4 @@
-import pilotarrClient from '../lib/pilotarrClient';
+import pilotarrClient from "../lib/pilotarrClient";
 
 /**
  * Analytics Service
@@ -13,15 +13,15 @@ import pilotarrClient from '../lib/pilotarrClient';
  */
 export const getUsageAnalytics = async (startDate, endDate) => {
   try {
-    const response = await pilotarrClient?.get('/analytics/usage', {
+    const response = await pilotarrClient?.get("/analytics/usage", {
       params: {
         start_date: startDate,
-        end_date: endDate
-      }
+        end_date: endDate,
+      },
     });
     return response?.data || [];
   } catch (error) {
-    console.error('Failed to fetch usage analytics:', error);
+    console.error("Failed to fetch usage analytics:", error);
     return [];
   }
 };
@@ -33,14 +33,14 @@ export const getUsageAnalytics = async (startDate, endDate) => {
  */
 export const getDeviceBreakdown = async (periodDays = 365) => {
   try {
-    const response = await pilotarrClient?.get('/analytics/devices', {
+    const response = await pilotarrClient?.get("/analytics/devices", {
       params: {
-        period_days: periodDays
-      }
+        period_days: periodDays,
+      },
     });
     return response?.data || [];
   } catch (error) {
-    console.error('Failed to fetch device breakdown:', error);
+    console.error("Failed to fetch device breakdown:", error);
     return [];
   }
 };
@@ -52,18 +52,22 @@ export const getDeviceBreakdown = async (periodDays = 365) => {
  * @param {string} order - Sort order 'asc' or 'desc' (default: 'desc')
  * @returns {Promise<Array>} Media analytics data
  */
-export const getMediaAnalytics = async (limit = 10, sortBy = 'plays', order = 'desc') => {
+export const getMediaAnalytics = async (
+  limit = 10,
+  sortBy = "plays",
+  order = "desc",
+) => {
   try {
-    const response = await pilotarrClient?.get('/analytics/media', {
+    const response = await pilotarrClient?.get("/analytics/media", {
       params: {
         limit,
         sort_by: sortBy,
-        order
-      }
+        order,
+      },
     });
     return response?.data || [];
   } catch (error) {
-    console.error('Failed to fetch media analytics:', error);
+    console.error("Failed to fetch media analytics:", error);
     return [];
   }
 };
@@ -74,11 +78,29 @@ export const getMediaAnalytics = async (limit = 10, sortBy = 'plays', order = 'd
  */
 export const getServerMetrics = async () => {
   try {
-    const response = await pilotarrClient?.get('/analytics/server-metrics');
+    const response = await pilotarrClient?.get("/analytics/server-metrics");
     return response?.data || null;
   } catch (error) {
-    console.error('Failed to fetch server metrics:', error);
+    console.error("Failed to fetch server metrics:", error);
     return null;
+  }
+};
+
+/**
+ * Fetch playback sessions for a date range
+ * @param {string} start - Start date YYYY-MM-DD
+ * @param {string} end - End date YYYY-MM-DD
+ * @returns {Promise<Array>} Playback sessions
+ */
+export const getPlaybackSessions = async (start, end) => {
+  try {
+    const params = new URLSearchParams();
+    if (start) params.append("start", start);
+    if (end) params.append("end", end);
+    const response = await pilotarrClient?.get(`/analytics/sessions?${params}`);
+    return response?.data || [];
+  } catch (error) {
+    return [];
   }
 };
 
@@ -86,5 +108,6 @@ export default {
   getUsageAnalytics,
   getDeviceBreakdown,
   getMediaAnalytics,
-  getServerMetrics
+  getServerMetrics,
+  getPlaybackSessions,
 };
