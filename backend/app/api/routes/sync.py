@@ -60,6 +60,26 @@ async def trigger_sonarr_episodes_sync(
     }
 
 
+@router.post("/trigger/jellyfin-streams")
+async def trigger_jellyfin_streams_sync(background_tasks: BackgroundTasks):
+    """Déclencher la synchronisation des MediaStreams Jellyfin (sous-titres, audio)"""
+
+    async def run_streams_sync():
+        db = SessionLocal()
+        try:
+            service = JellyfinStreamsService(db)
+            result = await service.sync_all()
+            print(f"📊 Streams sync completed: {result}")
+        except Exception as e:
+            print(f"❌ Error in streams sync: {e}")
+        finally:
+            db.close()
+
+    background_tasks.add_task(run_streams_sync)
+
+    return {"message": "Synchronisation MediaStreams Jellyfin lancée en arrière-plan", "status": "started"}
+
+
 @router.post("/trigger/{service_name}")
 async def trigger_service_sync(service_name: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Déclencher la synchronisation d'un service spécifique"""
@@ -79,26 +99,6 @@ async def trigger_service_sync(service_name: str, background_tasks: BackgroundTa
     background_tasks.add_task(run_service_sync)
 
     return {"message": f"Synchronisation {service_name} lancée", "status": "started"}
-
-
-@router.post("/trigger/jellyfin-streams")
-async def trigger_jellyfin_streams_sync(background_tasks: BackgroundTasks):
-    """Déclencher la synchronisation des MediaStreams Jellyfin (sous-titres, audio)"""
-
-    async def run_streams_sync():
-        db = SessionLocal()
-        try:
-            service = JellyfinStreamsService(db)
-            result = await service.sync_all()
-            print(f"📊 Streams sync completed: {result}")
-        except Exception as e:
-            print(f"❌ Error in streams sync: {e}")
-        finally:
-            db.close()
-
-    background_tasks.add_task(run_streams_sync)
-
-    return {"message": "Synchronisation MediaStreams Jellyfin lancée en arrière-plan", "status": "started"}
 
 
 @router.post("/debug/test-episodes")
