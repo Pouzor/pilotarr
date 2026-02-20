@@ -53,10 +53,10 @@ class QBittorrentConnector(BaseConnector):
 
     async def login(self) -> bool:
         """
-        Authentification sur qBittorrent
+        qBittorrent Auth
 
         Returns:
-            True si authentification réussie, False sinon
+            True or False
         """
         try:
             await self._ensure_session()
@@ -67,11 +67,11 @@ class QBittorrentConnector(BaseConnector):
             data.add_field("username", self.username)
             data.add_field("password", self.password)
 
-            logger.info(f"🔐 Tentative de connexion à {login_url}")
+            logger.info(f"🔐 Try to connect {login_url}")
 
             async with self.session.post(login_url, data=data) as response:
                 text = await response.text()
-                logger.info(f"📥 Réponse login : status={response.status}, body={text}")
+                logger.info(f"📥 Response login : status={response.status}, body={text}")
 
                 if response.status == 200 and text.strip() == "Ok.":
                     # Vérifier qu'on a bien reçu un cookie SID
@@ -79,25 +79,25 @@ class QBittorrentConnector(BaseConnector):
                     logger.info(f"🍪 Cookies reçus : {cookies}")
 
                     self._authenticated = True
-                    logger.info("✅ Authentification qBittorrent réussie")
+                    logger.info("✅ Auth qBittorent success")
                     return True
                 else:
-                    logger.error(f"❌ Authentification échouée : status={response.status}, body={text}")
+                    logger.error(f"❌ Auth failed : status={response.status}, body={text}")
                     return False
 
         except Exception as e:
-            logger.error(f"❌ Erreur lors de l'authentification qBittorrent : {e}")
+            logger.error(f"❌ Error Auth failed : {e}")
             return False
 
     async def get_torrent_info(self, torrent_hash: str) -> dict[str, Any] | None:
         """
-        Récupère les informations d'un torrent par son hash
+        Get torrent information by hash
 
         Args:
-            torrent_hash: Hash du torrent
+            torrent_hash: Hash
 
         Returns:
-            Dictionnaire avec les infos du torrent ou None
+            Torrent informations
         """
         try:
             await self._ensure_authenticated()
@@ -109,7 +109,7 @@ class QBittorrentConnector(BaseConnector):
             logger.info(f"🔍 Récupération infos torrent : {url}?hashes={torrent_hash}")
 
             async with self.session.get(url, params=params) as response:
-                logger.info(f"📥 Réponse get_torrent_info : status={response.status}")
+                logger.info(f"📥 Response get_torrent_info : status={response.status}")
 
                 if response.status == 200:
                     torrents = await response.json()
@@ -130,19 +130,19 @@ class QBittorrentConnector(BaseConnector):
                             "progress": round(torrent.get("progress", 0) * 100, 1),
                         }
                     else:
-                        logger.warning(f"⚠️  Torrent {torrent_hash} non trouvé")
+                        logger.warning(f"⚠️  Torrent {torrent_hash} not found")
                         return None
                 elif response.status == 403:
-                    logger.error("❌ 403 Forbidden - Session expirée ?")
+                    logger.error("❌ 403 Forbidden - Expired session ?")
                     # Réessayer avec une nouvelle authentification
                     self._authenticated = False
                     return None
                 else:
-                    logger.error(f"❌ Erreur HTTP {response.status}")
+                    logger.error(f"❌ Error HTTP {response.status}")
                     return None
 
         except Exception as e:
-            logger.error(f"❌ Erreur lors de la récupération du torrent : {e}")
+            logger.error(f"❌ Error from getting torrent : {e}")
             return None
 
     async def get_torrents_info(self, hashes: list[str]) -> dict[str, dict[str, Any]]:
@@ -186,43 +186,160 @@ class QBittorrentConnector(BaseConnector):
                     logger.info(f"✅ Batch fetch: {len(result)}/{len(hashes)} torrents found")
                     return result
                 elif response.status == 403:
-                    logger.error("❌ 403 Forbidden - Session expirée ?")
+                    logger.error("❌ 403 Forbidden - Expired session ?")
                     self._authenticated = False
                     return {}
                 else:
-                    logger.error(f"❌ Erreur HTTP {response.status}")
+                    logger.error(f"❌ HTTP Error {response.status}")
                     return {}
 
         except Exception as e:
-            logger.error(f"❌ Erreur lors du batch fetch torrents : {e}")
+            logger.error(f"❌ Error from fetching torrents : {e}")
             return {}
 
     def _map_status(self, qbt_state: str) -> str:
         """
-        Mappe les états qBittorrent vers des états simplifiés
+        Map qBittorrent states
 
         Args:
-            qbt_state: État qBittorrent (ex: "uploading", "downloading", etc.)
+            qbt_state: State qBittorrent (ex: "uploading", "downloading", etc.)
 
         Returns:
-            État simplifié : "seeding", "downloading", "paused", "completed", "error"
+            clean state : "seeding", "downloading", "paused", "queued", "checking", "error", "unknown"
         """
         state_mapping = {
             "uploading": "seeding",
             "stalledUP": "seeding",
-            "queuedUP": "seeding",
+            "forcedUP": "seeding",
             "downloading": "downloading",
             "stalledDL": "downloading",
-            "queuedDL": "downloading",
+            "forcedDL": "downloading",
             "pausedUP": "paused",
             "pausedDL": "paused",
+            "queuedUP": "queued",
+            "queuedDL": "queued",
+            "checkingUP": "checking",
+            "checkingDL": "checking",
+            "checkingResumeData": "checking",
+            "moving": "checking",
             "error": "error",
             "missingFiles": "error",
-            "checkingUP": "completed",
-            "checkingDL": "completed",
         }
 
         return state_mapping.get(qbt_state, "unknown")
+
+    @staticmethod
+    def _parse_tracker_hostname(tracker_url: str) -> str | None:
+        """Extracts hostname from a tracker URL, returns None for empty/invalid."""
+        if not tracker_url:
+            return None
+        try:
+            from urllib.parse import urlparse
+
+            hostname = urlparse(tracker_url).hostname
+            return hostname or None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _unix_to_iso(ts: int | None) -> str | None:
+        """Converts a unix timestamp to ISO 8601 string. Returns None for -1 or None."""
+        if ts is None or ts == -1:
+            return None
+        from datetime import datetime, timezone
+
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+    def _map_torrent(self, torrent: dict) -> dict:
+        """Maps a raw qBittorrent torrent dict to the client-agnostic schema."""
+        category = torrent.get("category") or None
+        tags_raw = torrent.get("tags", "")
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()] if tags_raw else []
+        return {
+            "id": torrent.get("hash", "").upper(),
+            "name": torrent.get("name"),
+            "status": self._map_status(torrent.get("state", "")),
+            "category": category,
+            "size": torrent.get("size", 0),
+            "downloaded": torrent.get("downloaded", 0),
+            "uploaded": torrent.get("uploaded", 0),
+            "progress": torrent.get("progress", 0.0),
+            "dlSpeed": torrent.get("dlspeed", 0),
+            "ulSpeed": torrent.get("upspeed", 0),
+            "seeds": torrent.get("num_seeds", 0),
+            "peers": torrent.get("num_leechs", 0),
+            "ratio": round(torrent.get("ratio", 0.0), 3),
+            "eta": torrent.get("eta", -1),
+            "tracker": self._parse_tracker_hostname(torrent.get("tracker", "")),
+            "tags": tags,
+            "addedOn": self._unix_to_iso(torrent.get("added_on")),
+            "completedOn": self._unix_to_iso(torrent.get("completion_on")),
+            "savePath": torrent.get("save_path"),
+        }
+
+    async def get_all_torrents(self) -> list[dict]:
+        """
+        Returns all torrents in the client-agnostic schema.
+
+        Returns:
+            List of torrent dicts
+        """
+        try:
+            await self._ensure_authenticated()
+
+            url = f"{self.base_url}/api/v2/torrents/info"
+            logger.info("🔍 Fetching all torrents")
+
+            async with self.session.get(url) as response:
+                if response.status == 200:
+                    torrents = await response.json()
+                    result = [self._map_torrent(t) for t in torrents]
+                    logger.info(f"✅ get_all_torrents: {len(result)} torrents")
+                    return result
+                elif response.status == 403:
+                    logger.error("❌ 403 Forbidden - session expired?")
+                    self._authenticated = False
+                    return []
+                else:
+                    logger.error(f"❌ HTTP {response.status}")
+                    return []
+
+        except Exception as e:
+            logger.error(f"❌ get_all_torrents error: {e}")
+            return []
+
+    async def get_transfer_info(self) -> dict:
+        """
+        Returns global transfer stats from qBittorrent.
+
+        Returns:
+            Dict with dl_speed, ul_speed, connection_status
+        """
+        try:
+            await self._ensure_authenticated()
+
+            url = f"{self.base_url}/api/v2/transfer/info"
+            logger.info("🔍 Fetching transfer info")
+
+            async with self.session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {
+                        "dl_speed": data.get("dl_info_speed", 0),
+                        "ul_speed": data.get("up_info_speed", 0),
+                        "connection_status": data.get("connection_status", "disconnected"),
+                    }
+                elif response.status == 403:
+                    logger.error("❌ 403 Forbidden - session expired?")
+                    self._authenticated = False
+                    return {"dl_speed": 0, "ul_speed": 0, "connection_status": "disconnected"}
+                else:
+                    logger.error(f"❌ HTTP {response.status}")
+                    return {"dl_speed": 0, "ul_speed": 0, "connection_status": "disconnected"}
+
+        except Exception as e:
+            logger.error(f"❌ get_transfer_info error: {e}")
+            return {"dl_speed": 0, "ul_speed": 0, "connection_status": "disconnected"}
 
     async def test_connection(self) -> tuple[bool, str]:
         """

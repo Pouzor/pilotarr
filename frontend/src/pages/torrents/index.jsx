@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Header from "../../components/navigation/Header";
 import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import TorrentsTable from "./components/TorrentsTable";
-import { MOCK_TORRENTS } from "./mockData";
+import { getTorrents } from "../../services/torrentService";
 
 // ─── Formatters (shared helpers) ─────────────────────────────────────────────
 
@@ -32,9 +32,9 @@ const FILTER_TABS = [
 
 // ─── Global Stats ─────────────────────────────────────────────────────────────
 
-function GlobalStats({ torrents }) {
-  const totalDl = torrents.reduce((acc, t) => acc + t.dlSpeed, 0);
-  const totalUl = torrents.reduce((acc, t) => acc + t.ulSpeed, 0);
+function GlobalStats({ torrents, transfer }) {
+  const totalDl = transfer?.dl_speed ?? torrents.reduce((acc, t) => acc + t.dlSpeed, 0);
+  const totalUl = transfer?.ul_speed ?? torrents.reduce((acc, t) => acc + t.ulSpeed, 0);
   const totalSize = torrents.reduce((acc, t) => acc + t.downloaded, 0);
   const totalUploaded = torrents.reduce((acc, t) => acc + t.uploaded, 0);
   const globalRatio = totalSize > 0 ? totalUploaded / totalSize : 0;
@@ -95,11 +95,36 @@ function GlobalStats({ torrents }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const POLL_INTERVAL_MS = 60_000;
+
 const Torrents = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
-  const [torrents, setTorrents] = useState(MOCK_TORRENTS);
+  const [torrents, setTorrents] = useState([]);
+  const [transfer, setTransfer] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const intervalRef = useRef(null);
+
+  const fetchTorrents = useCallback(async () => {
+    try {
+      const data = await getTorrents();
+      setTorrents(data.torrents ?? []);
+      setTransfer(data.transfer ?? null);
+      setError(null);
+    } catch (err) {
+      setError(err?.response?.data?.detail ?? err?.message ?? "Failed to load torrents");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTorrents();
+    intervalRef.current = setInterval(fetchTorrents, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalRef.current);
+  }, [fetchTorrents]);
 
   // Count per tab
   const tabCounts = useMemo(() => {
@@ -209,14 +234,26 @@ const Torrents = () => {
 
           {/* Client badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg self-start lg:self-auto">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            <span
+              className={`w-2 h-2 rounded-full animate-pulse ${
+                error ? "bg-error" : transfer ? "bg-success" : "bg-muted-foreground"
+              }`}
+            />
             <span className="text-sm text-muted-foreground">qBittorrent</span>
             <Icon name="ChevronDown" size={14} className="text-muted-foreground/50" />
           </div>
         </div>
 
+        {/* Error banner */}
+        {error && (
+          <div className="bg-error/10 border border-error/30 rounded-lg px-4 py-3 mb-4 flex items-center gap-2">
+            <Icon name="AlertCircle" size={16} className="text-error flex-shrink-0" />
+            <span className="text-sm text-foreground">{error}</span>
+          </div>
+        )}
+
         {/* Global Stats */}
-        <GlobalStats torrents={torrents} />
+        <GlobalStats torrents={torrents} transfer={transfer} />
 
         {/* Filter tabs + Search */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -297,15 +334,24 @@ const Torrents = () => {
           </div>
         )}
 
+        {/* Loading spinner (first load only) */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
         {/* Table */}
-        <TorrentsTable
-          data={filteredTorrents}
-          selectedItems={selectedItems}
-          onSelectAll={handleSelectAll}
-          onSelectItem={handleSelectItem}
-          onPauseResume={handlePauseResume}
-          onRecheck={handleRecheck}
-        />
+        {!isLoading && (
+          <TorrentsTable
+            data={filteredTorrents}
+            selectedItems={selectedItems}
+            onSelectAll={handleSelectAll}
+            onSelectItem={handleSelectItem}
+            onPauseResume={handlePauseResume}
+            onRecheck={handleRecheck}
+          />
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 Routes pour gérer les torrents (qBittorrent)
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -17,6 +18,53 @@ from app.services.torrent_enrichment_service import TorrentEnrichmentService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/torrents", tags=["torrents"])
+
+
+@router.get("/all")
+async def list_all_torrents(db: Session = Depends(get_db), _: str = Depends(verify_api_key)) -> dict[str, Any]:
+    """
+    Returns all torrents from the active torrent client plus global transfer stats.
+
+    Response shape:
+        {
+            "client": "qbittorrent",
+            "transfer": { "dl_speed": int, "ul_speed": int, "connection_status": str },
+            "torrents": [ { ...client-agnostic schema... } ]
+        }
+    """
+    qbt_service = (
+        db.query(ServiceConfiguration)
+        .filter(ServiceConfiguration.service_name == "qbittorrent", ServiceConfiguration.is_active.is_(True))
+        .first()
+    )
+
+    if not qbt_service:
+        raise HTTPException(status_code=404, detail="qBittorrent service not configured")
+
+    connector = create_connector(qbt_service)
+    try:
+        authenticated = await connector.login()
+        if not authenticated:
+            raise HTTPException(status_code=503, detail="Could not authenticate with qBittorrent")
+
+        torrents, transfer = await asyncio.gather(
+            connector.get_all_torrents(),
+            connector.get_transfer_info(),
+        )
+
+        return {
+            "client": "qbittorrent",
+            "transfer": transfer,
+            "torrents": torrents,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching all torrents: {e}")
+        raise HTTPException(status_code=503, detail=f"qBittorrent unreachable: {e}") from e
+    finally:
+        await connector.close()
 
 
 @router.get("/{torrent_hash}")
