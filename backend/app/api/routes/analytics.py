@@ -253,6 +253,15 @@ async def receive_playback_webhook(request: Request, db: Session = Depends(get_d
 
             if library_item:
                 session_data["library_item_id"] = library_item.id
+                # Learn Jellyfin ID from webhook so future matches use the fast path
+                if not library_item.jellyfin_id:
+                    if media_type == "movie":
+                        library_item.jellyfin_id = media_id
+                    elif media_type == "tv":
+                        jf_series_id = item.get("SeriesId")
+                        if jf_series_id:
+                            library_item.jellyfin_id = jf_series_id
+                    db.flush()
 
             playback_session = AnalyticsService.start_session(db, session_data)
             logger.info(f"✅ Session créée : {playback_session.id} - {playback_session.media_title}")
