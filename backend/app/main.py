@@ -7,6 +7,7 @@ from app.api.routes import analytics, dashboard, jellyseerr, library, monitoring
 from app.core.config import settings
 from app.core.security import verify_api_key
 from app.db import check_db_connection, init_db
+from app.db_migrations import create_analytics_tables
 from app.schedulers.analytics_scheduler import analytics_scheduler
 from app.schedulers.scheduler import app_scheduler
 
@@ -21,6 +22,8 @@ async def lifespan(app: FastAPI):
         print("✅ Connexion à la base de données OK")
         init_db()
         print("✅ Tables initialisées")
+        create_analytics_tables()
+        print("✅ Migrations appliquées")
     else:
         print("❌ Échec de connexion à la base de données")
 
