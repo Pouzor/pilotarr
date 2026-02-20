@@ -8,7 +8,7 @@ const MediaCard = ({ item }) => {
   const navigate = useNavigate();
 
   const getTypeIcon = () => {
-    return item?.type === "movie" ? "Film" : "TV";
+    return item?.type === "movie" ? "Film" : "Tv";
   };
 
   const getTypeColor = () => {
