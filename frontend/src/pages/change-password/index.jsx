@@ -29,7 +29,7 @@ const ChangePassword = () => {
     }
 
     setLoading(true);
-    const result = auth.changePassword(currentPassword, newPassword);
+    const result = await auth.changePassword(currentPassword, newPassword, confirmPassword);
     setLoading(false);
 
     if (result.ok) {

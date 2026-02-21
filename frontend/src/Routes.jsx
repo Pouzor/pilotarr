@@ -17,7 +17,8 @@ import ChangePassword from "./pages/change-password";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  if (initializing) return null;
   return user ? children : <Navigate to="/login" replace />;
 };
 

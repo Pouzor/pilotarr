@@ -14,16 +14,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  if (auth.user) {
-    return <Navigate to="/main-dashboard" replace />;
-  }
+  if (auth.initializing) return null;
+  if (auth.user) return <Navigate to="/main-dashboard" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const result = auth.login(username, password);
+    const result = await auth.login(username, password);
 
     setLoading(false);
     if (result.ok) {
