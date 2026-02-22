@@ -9,7 +9,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.security import verify_api_key
 from app.db import get_db
 from app.models.models import LibraryItemTorrent, ServiceConfiguration
 from app.services.connector_factory import create_connector
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/api/torrents", tags=["torrents"])
 
 
 @router.get("/all")
-async def list_all_torrents(db: Session = Depends(get_db), _: str = Depends(verify_api_key)) -> dict[str, Any]:
+async def list_all_torrents(db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Returns all torrents from the active torrent client plus global transfer stats.
 
@@ -68,9 +67,7 @@ async def list_all_torrents(db: Session = Depends(get_db), _: str = Depends(veri
 
 
 @router.get("/{torrent_hash}")
-async def get_torrent_info(
-    torrent_hash: str, db: Session = Depends(get_db), _: str = Depends(verify_api_key)
-) -> dict[str, Any]:
+async def get_torrent_info(torrent_hash: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Récupère les informations d'un torrent depuis qBittorrent
 
@@ -111,9 +108,7 @@ async def get_torrent_info(
 
 
 @router.get("/item/{library_item_id}")
-async def get_item_torrents(
-    library_item_id: str, db: Session = Depends(get_db), _: str = Depends(verify_api_key)
-) -> list[dict[str, Any]]:
+async def get_item_torrents(library_item_id: str, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
     """
     Get all torrent rows for a library item (for media detail page).
 
@@ -140,9 +135,7 @@ async def get_item_torrents(
 
 
 @router.post("/enrich")
-async def enrich_library_items(
-    limit: int | None = None, db: Session = Depends(get_db), _: str = Depends(verify_api_key)
-) -> dict[str, Any]:
+async def enrich_library_items(limit: int | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Enrichit les library_items avec les données qBittorrent
 
@@ -158,9 +151,7 @@ async def enrich_library_items(
 
 
 @router.post("/enrich/recent")
-async def enrich_recent_items(
-    days: int = 7, db: Session = Depends(get_db), _: str = Depends(verify_api_key)
-) -> dict[str, Any]:
+async def enrich_recent_items(days: int = 7, db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Enrichit les items récents avec les données qBittorrent
 

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import analytics, auth, dashboard, jellyseerr, library, monitoring, services, sync, torrents
 from app.core.config import settings
-from app.core.security import verify_api_key
+from app.core.security import get_current_user
 from app.db import SessionLocal, check_db_connection, init_db
 from app.db_migrations import create_analytics_tables
 from app.schedulers.analytics_scheduler import analytics_scheduler
@@ -60,18 +60,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth routes — public (no API key), JWT handled per-endpoint
+# Public routes
 app.include_router(auth.router)
+app.include_router(analytics.public_router, prefix="/api")  # webhook only (?apiKey=)
 
-# Protected routes — require X-API-Key header
-app.include_router(services.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(dashboard.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(jellyseerr.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(sync.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(library.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(monitoring.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(analytics.router, prefix="/api")
-app.include_router(torrents.router, dependencies=[Depends(verify_api_key)])
+# JWT-protected routes
+app.include_router(services.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(dashboard.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(jellyseerr.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(sync.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(library.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(monitoring.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(analytics.router, prefix="/api", dependencies=[Depends(get_current_user)])
+app.include_router(torrents.router, dependencies=[Depends(get_current_user)])
 
 
 @app.get("/")

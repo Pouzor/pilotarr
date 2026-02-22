@@ -23,7 +23,7 @@ from app.api.schemas import (
     UsageAnalyticsResponse,
 )
 from app.core.config import settings
-from app.core.security import verify_api_key
+from app.core.security import verify_webhook_api_key
 from app.db import get_db
 from app.models.enums import MediaType, PlaybackMethod, ServiceType, SessionStatus
 from app.models.models import (
@@ -38,6 +38,7 @@ from app.services.analytics_service import AnalyticsService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
+public_router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 # Pattern Jellyfin ID (hex 32 chars)
 _JELLYFIN_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{1,64}$")
@@ -55,8 +56,12 @@ def _truncate(value: str | None, max_length: int = 255) -> str | None:
 # ============================================
 
 
-@router.post("/webhook/playback", status_code=status.HTTP_200_OK)
-async def receive_playback_webhook(request: Request, db: Session = Depends(get_db)):
+@public_router.post("/webhook/playback", status_code=status.HTTP_200_OK)
+async def receive_playback_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_webhook_api_key),
+):
     """
     Endpoint pour recevoir les webhooks de lecture depuis Jellyfin
 
@@ -321,7 +326,6 @@ async def get_usage_analytics(
     start_date: date | None = Query(None, description="Date de début (YYYY-MM-DD)"),
     end_date: date | None = Query(None, description="Date de fin (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
 ):
     """
     📊 VUE 1 : Usage Analytics - Graphique temporel
@@ -364,7 +368,6 @@ async def get_media_playback_analytics(
     ),
     order: Literal["asc", "desc"] = Query("desc", description="Ordre : asc ou desc"),
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
 ):
     try:
         from collections import defaultdict
@@ -467,7 +470,7 @@ async def get_media_playback_analytics(
 
 
 @router.get("/sessions/active", response_model=list[ActiveSessionItem])
-async def get_active_sessions(db: Session = Depends(get_db), api_key: str = Depends(verify_api_key)):
+async def get_active_sessions(db: Session = Depends(get_db)):
     """
     📊 VUE 3 : Sessions actives en temps réel
 
@@ -500,7 +503,6 @@ async def get_active_sessions(db: Session = Depends(get_db), api_key: str = Depe
 async def get_device_breakdown(
     period_days: int = Query(7, ge=1, le=365, description="Période en jours"),
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
 ):
     try:
         end_date = date.today()
@@ -542,7 +544,7 @@ async def get_device_breakdown(
 
 
 @router.get("/server-metrics", response_model=ServerPerformanceResponse | None)
-async def get_server_metrics(db: Session = Depends(get_db), api_key: str = Depends(verify_api_key)):
+async def get_server_metrics(db: Session = Depends(get_db)):
     try:
         # Récupérer la dernière métrique serveur
         latest_metric = db.query(ServerMetric).order_by(desc(ServerMetric.recorded_at)).first()

@@ -1,11 +1,10 @@
 import axios from "axios";
 
 const apiUrl = import.meta.env?.VITE_PILOTARR_API_URL;
-const apiKey = import.meta.env?.VITE_PILOTARR_API_KEY;
 
-if (!apiUrl || !apiKey) {
+if (!apiUrl) {
   console.warn(
-    "Missing Pilotarr environment variables. Please check your .env file for VITE_PILOTARR_API_URL and VITE_PILOTARR_API_KEY",
+    "Missing Pilotarr environment variable VITE_PILOTARR_API_URL. Please check your .env file.",
   );
 }
 
@@ -16,10 +15,18 @@ if (!apiUrl || !apiKey) {
 export const PilotarrClient = axios?.create({
   baseURL: apiUrl,
   headers: {
-    "X-API-Key": apiKey,
     "Content-Type": "application/json",
   },
   timeout: 30000,
+});
+
+// Inject JWT Bearer token from localStorage on every request
+PilotarrClient?.interceptors?.request?.use((config) => {
+  const token = localStorage.getItem("pilotarr_token");
+  if (token) {
+    config.headers["Authorization"] = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Add response interceptor for error handling

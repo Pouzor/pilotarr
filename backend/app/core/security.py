@@ -1,24 +1,22 @@
-from fastapi import Depends, HTTPException, Security, status
-from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Query, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
 
 # ---------------------------------------------------------------------------
-# Existing: X-API-Key for machine-to-machine (all non-auth routes)
+# Webhook: ?apiKey=xxx query parameter (machine-to-machine, Jellyfin webhook)
 # ---------------------------------------------------------------------------
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
-
-async def verify_api_key(api_key: str = Security(api_key_header)):
-    """Check that X-API-Key header matches the configured key."""
+async def verify_webhook_api_key(api_key: str = Query(..., alias="apiKey")):
+    """Check that ?apiKey= query parameter matches the configured key."""
     if api_key != settings.API_KEY:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API Key")
     return api_key
 
 
 # ---------------------------------------------------------------------------
-# New: Bearer JWT for user-facing auth routes
+# Bearer JWT for all user-facing routes
 # ---------------------------------------------------------------------------
 
 _bearer_scheme = HTTPBearer(auto_error=True)
