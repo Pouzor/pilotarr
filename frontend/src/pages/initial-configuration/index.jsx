@@ -5,7 +5,6 @@ import Icon from "../../components/AppIcon";
 import Button from "../../components/ui/Button";
 import ServiceCard from "./components/ServiceCard";
 import ConfigurationProgress from "./components/ConfigurationProgress";
-import SecurityInfo from "./components/SecurityInfo";
 import QuickStartGuide from "./components/QuickStartGuide";
 import {
   getServiceConfigurations,
@@ -346,13 +345,10 @@ const InitialConfiguration = () => {
                 testStatus={testStatuses?.[service?.id]}
               />
             ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-            <SecurityInfo />
             <QuickStartGuide />
           </div>
 
+          <br></br>
           <div className="bg-card border border-border rounded-lg p-4 md:p-6 shadow-elevation-2">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
