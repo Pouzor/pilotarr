@@ -9,7 +9,9 @@ const ConfigurationProgress = ({ services, testStatuses, configurations }) => {
 
     // Empty: No URL configured, or no credential (apiKey for API services, username for qBittorrent)
     const isQBittorrent = serviceId === "qbittorrent";
-    const hasCredential = isQBittorrent ? config?.username : config?.apiKey;
+    const hasCredential = isQBittorrent
+      ? config?.username && (config?.password || config?.hasPassword)
+      : config?.apiKey || config?.hasApiKey;
     if (!config?.url || !hasCredential) {
       return "empty";
     }
