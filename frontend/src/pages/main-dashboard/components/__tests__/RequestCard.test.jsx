@@ -68,6 +68,11 @@ describe("RequestCard – rendering", () => {
     expect(screen.getByText("2010")).toBeInTheDocument();
   });
 
+  it("displays the media type", () => {
+    renderCard();
+    expect(screen.getByText("movie")).toBeInTheDocument();
+  });
+
   it("displays the requester name", () => {
     renderCard();
     expect(screen.getByText("alice")).toBeInTheDocument();
@@ -91,6 +96,39 @@ describe("RequestCard – rendering", () => {
   it("displays the priority badge", () => {
     renderCard();
     expect(screen.getByText("medium")).toBeInTheDocument();
+  });
+});
+
+// ── Media type icons ──────────────────────────────────────────────────────────
+
+describe("RequestCard – media type icons", () => {
+  it("renders Film icon for movie media type", () => {
+    renderCard({ request: { mediaType: "movie" } });
+    expect(screen.getByTestId("icon-Film")).toBeInTheDocument();
+  });
+
+  it("renders Tv icon for tv media type", () => {
+    renderCard({ request: { mediaType: "tv" } });
+    expect(screen.getByTestId("icon-Tv")).toBeInTheDocument();
+  });
+});
+
+// ── Priority rendering ────────────────────────────────────────────────────────
+
+describe("RequestCard – priority labels", () => {
+  it("renders high priority label", () => {
+    renderCard({ request: { priority: "high" } });
+    expect(screen.getByText("high")).toBeInTheDocument();
+  });
+
+  it("renders medium priority label", () => {
+    renderCard({ request: { priority: "medium" } });
+    expect(screen.getByText("medium")).toBeInTheDocument();
+  });
+
+  it("renders low priority label", () => {
+    renderCard({ request: { priority: "low" } });
+    expect(screen.getByText("low")).toBeInTheDocument();
   });
 });
 
@@ -184,6 +222,26 @@ describe("RequestCard – declined state (status=3)", () => {
   });
 });
 
+// ── Unknown status (edge case) ────────────────────────────────────────────────
+
+describe("RequestCard – unknown status (status=4)", () => {
+  it("does not show Approve/Reject buttons", () => {
+    renderCard({ request: { status: 4 } });
+    expect(screen.queryByText("Approve")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reject")).not.toBeInTheDocument();
+  });
+
+  it("does not show Approved badge", () => {
+    renderCard({ request: { status: 4 } });
+    expect(screen.queryByText("Approved")).not.toBeInTheDocument();
+  });
+
+  it("does not show Declined badge", () => {
+    renderCard({ request: { status: 4 } });
+    expect(screen.queryByText("Declined")).not.toBeInTheDocument();
+  });
+});
+
 // ── Optional fields ───────────────────────────────────────────────────────────
 
 describe("RequestCard – optional fields", () => {
@@ -197,6 +255,11 @@ describe("RequestCard – optional fields", () => {
     expect(screen.getByText("Inception")).toBeInTheDocument();
   });
 
+  it("does not crash when requestedDate is missing", () => {
+    renderCard({ request: { requestedDate: undefined } });
+    expect(screen.getByText("Inception")).toBeInTheDocument();
+  });
+
   it("does not crash when priority is missing", () => {
     renderCard({ request: { priority: undefined } });
     expect(screen.getByText("Inception")).toBeInTheDocument();
@@ -205,5 +268,25 @@ describe("RequestCard – optional fields", () => {
   it("does not crash when quality is missing", () => {
     renderCard({ request: { quality: undefined } });
     expect(screen.getByText("Inception")).toBeInTheDocument();
+  });
+
+  it("does not render year when missing", () => {
+    renderCard({ request: { year: undefined } });
+    expect(screen.queryByText("2010")).not.toBeInTheDocument();
+  });
+
+  it("does not render description when missing", () => {
+    renderCard({ request: { description: undefined } });
+    expect(screen.queryByText("A mind-bending thriller.")).not.toBeInTheDocument();
+  });
+
+  it("does not render requestedDate when missing", () => {
+    renderCard({ request: { requestedDate: undefined } });
+    expect(screen.queryByText("2025-01-10")).not.toBeInTheDocument();
+  });
+
+  it("does not render quality when missing", () => {
+    renderCard({ request: { quality: undefined } });
+    expect(screen.queryByText(/HD-1080p/)).not.toBeInTheDocument();
   });
 });

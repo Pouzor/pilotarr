@@ -233,7 +233,7 @@ class TorrentEnrichmentService:
                 names.append(info["name"])
 
         # Compute aggregated status
-        if all(s == "seeding" for s in statuses):
+        if statuses and all(s == "seeding" for s in statuses):
             agg_status = "seeding"
         elif any(s == "downloading" for s in statuses):
             agg_status = "downloading"
