@@ -33,9 +33,9 @@ class TestLogin:
         resp = client.post("/api/auth/login", json={"username": "alice", "password": "alicepass"})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["token_type"] == "bearer"
-        assert "access_token" in data
         assert data["username"] == "alice"
+        assert data["is_active"] is True
+        assert "pilotarr_token" in resp.cookies
 
     def test_login_wrong_password(self, client, db):
         _seed_user(db)
@@ -67,7 +67,7 @@ class TestMe:
 
     def test_me_unauthenticated(self, client):
         resp = client.get("/api/auth/me")
-        assert resp.status_code == 403  # HTTPBearer returns 403 when no header
+        assert resp.status_code == 401  # No cookie → 401 Unauthorized
 
 
 # ── POST /api/auth/change-password ────────────────────────────────────────────

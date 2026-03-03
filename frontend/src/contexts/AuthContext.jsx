@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { loginApi, meApi, changePasswordApi } from "../services/authService";
+import { loginApi, meApi, logoutApi, changePasswordApi } from "../services/authService";
 
 const AuthContext = createContext({});
 
@@ -7,26 +7,19 @@ export const useAuth = () => {
   return useContext(AuthContext);
 };
 
-const TOKEN_KEY = "pilotarr_token";
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
-  // On mount: restore session from stored token
+  // On mount: restore session from httpOnly cookie via /auth/me
   useEffect(() => {
     const restore = async () => {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        setInitializing(false);
-        return;
-      }
       try {
-        const data = await meApi(token);
-        setUser({ username: data.username, token });
+        const data = await meApi();
+        setUser({ username: data.username });
       } catch {
-        // Token expired or invalid — clear it
-        localStorage.removeItem(TOKEN_KEY);
+        // No valid cookie or expired token — user is not authenticated
+        setUser(null);
       } finally {
         setInitializing(false);
       }
@@ -37,9 +30,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const data = await loginApi(username, password);
-      const userData = { username: data.username, token: data.access_token };
-      localStorage.setItem(TOKEN_KEY, data.access_token);
-      setUser(userData);
+      setUser({ username: data.username });
       return { ok: true };
     } catch (err) {
       const message = err?.response?.data?.detail || "Invalid credentials";
@@ -47,14 +38,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
+  const logout = async () => {
+    try {
+      await logoutApi();
+    } catch {
+      // ignore — clear local state regardless
+    }
     setUser(null);
   };
 
   const changePassword = async (currentPassword, newPassword, confirmPassword) => {
     try {
-      await changePasswordApi(user?.token, currentPassword, newPassword, confirmPassword);
+      await changePasswordApi(currentPassword, newPassword, confirmPassword);
       return { ok: true };
     } catch (err) {
       const detail = err?.response?.data?.detail;

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 ALGORITHM = "HS256"
 DEFAULT_USERNAME = "pilotarr"
-DEFAULT_PASSWORD = "rratolip"
 
 
 # ---------------------------------------------------------------------------
@@ -81,9 +80,9 @@ def init_default_user(db: Session) -> None:
         return
     user = User(
         username=DEFAULT_USERNAME,
-        hashed_password=hash_password(DEFAULT_PASSWORD),
+        hashed_password=hash_password(settings.DEFAULT_ADMIN_PASSWORD),
         is_active=True,
     )
     db.add(user)
     db.commit()
-    logger.info("✅ Default user '%s' created", DEFAULT_USERNAME)
+    logger.info("✅ Default user '%s' created — change the password immediately", DEFAULT_USERNAME)

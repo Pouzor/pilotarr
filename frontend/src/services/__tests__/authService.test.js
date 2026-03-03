@@ -15,7 +15,7 @@ vi.mock("axios", () => {
 });
 
 import axios from "axios";
-import { loginApi, meApi, changePasswordApi } from "../authService";
+import { loginApi, logoutApi, meApi, changePasswordApi } from "../authService";
 
 const mockClient = axios.create();
 
@@ -26,7 +26,7 @@ beforeEach(() => {
 describe("loginApi", () => {
   it("posts credentials and returns response data", async () => {
     mockClient.post.mockResolvedValue({
-      data: { access_token: "tok123", token_type: "bearer", username: "alice" },
+      data: { username: "alice", is_active: true },
     });
 
     const result = await loginApi("alice", "pass");
@@ -35,7 +35,7 @@ describe("loginApi", () => {
       username: "alice",
       password: "pass",
     });
-    expect(result).toEqual({ access_token: "tok123", token_type: "bearer", username: "alice" });
+    expect(result).toEqual({ username: "alice", is_active: true });
   });
 
   it("throws on network error", async () => {
@@ -44,39 +44,45 @@ describe("loginApi", () => {
   });
 });
 
+describe("logoutApi", () => {
+  it("posts to /auth/logout", async () => {
+    mockClient.post.mockResolvedValue({});
+    await logoutApi();
+    expect(mockClient.post).toHaveBeenCalledWith("/auth/logout");
+  });
+});
+
 describe("meApi", () => {
-  it("fetches /auth/me with Bearer header", async () => {
+  it("fetches /auth/me with no explicit headers (cookie sent automatically)", async () => {
     mockClient.get.mockResolvedValue({ data: { username: "alice", is_active: true } });
 
-    const result = await meApi("tok123");
+    const result = await meApi();
 
-    expect(mockClient.get).toHaveBeenCalledWith("/auth/me", {
-      headers: { Authorization: "Bearer tok123" },
-    });
+    expect(mockClient.get).toHaveBeenCalledWith("/auth/me");
     expect(result).toEqual({ username: "alice", is_active: true });
   });
 
   it("throws on 401", async () => {
     mockClient.get.mockRejectedValue({ response: { status: 401 } });
-    await expect(meApi("bad-token")).rejects.toBeDefined();
+    await expect(meApi()).rejects.toBeDefined();
   });
 });
 
 describe("changePasswordApi", () => {
-  it("posts change-password with correct body and Bearer header", async () => {
+  it("posts change-password with correct body (no Authorization header)", async () => {
     mockClient.post.mockResolvedValue({});
 
-    await changePasswordApi("tok", "old", "newpass", "newpass");
+    await changePasswordApi("old", "newpass", "newpass");
 
-    expect(mockClient.post).toHaveBeenCalledWith(
-      "/auth/change-password",
-      { current_password: "old", new_password: "newpass", confirm_password: "newpass" },
-      { headers: { Authorization: "Bearer tok" } },
-    );
+    expect(mockClient.post).toHaveBeenCalledWith("/auth/change-password", {
+      current_password: "old",
+      new_password: "newpass",
+      confirm_password: "newpass",
+    });
   });
 
   it("throws on validation error", async () => {
     mockClient.post.mockRejectedValue({ response: { status: 422 } });
-    await expect(changePasswordApi("tok", "old", "x", "y")).rejects.toBeDefined();
+    await expect(changePasswordApi("old", "x", "y")).rejects.toBeDefined();
   });
 });

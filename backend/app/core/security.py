@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException, Query, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Cookie, HTTPException, Query, status
 
 from app.core.config import settings
 
@@ -16,30 +15,32 @@ async def verify_webhook_api_key(api_key: str = Query(..., alias="apiKey")):
 
 
 # ---------------------------------------------------------------------------
-# Bearer JWT for all user-facing routes
+# httpOnly cookie JWT for all user-facing routes
 # ---------------------------------------------------------------------------
-
-_bearer_scheme = HTTPBearer(auto_error=True)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    pilotarr_token: str | None = Cookie(default=None),
 ):
     """
-    Validate a Bearer JWT and return the corresponding User ORM object.
+    Validate the httpOnly session cookie and return the corresponding User ORM object.
 
     Import is deferred to avoid circular dependency between security ↔ auth_service ↔ models.
     """
     from app.db import SessionLocal
     from app.services.auth_service import decode_access_token, get_user_by_username
 
-    token = credentials.credentials
-    username = decode_access_token(token)
+    if not pilotarr_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    username = decode_access_token(pilotarr_token)
     if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     db = SessionLocal()
@@ -52,6 +53,5 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
-            headers={"WWW-Authenticate": "Bearer"},
         )
     return user

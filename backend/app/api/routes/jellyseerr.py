@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import JellyseerrRequest, RequestStatus, ServiceConfiguration, ServiceType
 from app.services import JellyseerrConnector
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jellyseerr", tags=["Jellyseerr"])
 
@@ -37,8 +41,9 @@ async def approve_request(request_id: str, db: Session = Depends(get_db)):
 
         return {"success": True, "message": "Requête approuvée avec succès"}
     except Exception as e:
+        logger.error("Error approving request %s: %s", request_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erreur lors de l'approbation: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors de l'approbation de la requête"
         ) from e
     finally:
         await connector.close()
@@ -70,8 +75,9 @@ async def decline_request(request_id: str, db: Session = Depends(get_db)):
 
         return {"success": True, "message": "Requête refusée avec succès"}
     except Exception as e:
+        logger.error("Error declining request %s: %s", request_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erreur lors du refus: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors du refus de la requête"
         ) from e
     finally:
         await connector.close()

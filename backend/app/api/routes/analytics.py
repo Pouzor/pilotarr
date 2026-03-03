@@ -73,12 +73,10 @@ async def receive_playback_webhook(
     - Resume : Reprise de lecture
     """
     try:
-        # Vérifier le secret webhook si configuré
-        webhook_secret = settings.WEBHOOK_SECRET
-        if webhook_secret:
-            request_secret = request.headers.get("X-Webhook-Secret", "")
-            if not hmac.compare_digest(request_secret, webhook_secret):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Secret webhook invalide")
+        # Vérifier le secret webhook
+        request_secret = request.headers.get("X-Webhook-Secret", "")
+        if not hmac.compare_digest(request_secret, settings.WEBHOOK_SECRET):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Secret webhook invalide")
 
         # Valider la taille du payload (max 1 Mo)
         body = await request.body()

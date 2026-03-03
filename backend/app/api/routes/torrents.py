@@ -60,7 +60,7 @@ async def list_all_torrents(db: Session = Depends(get_db)) -> dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Error fetching all torrents: {e}")
-        raise HTTPException(status_code=503, detail=f"qBittorrent unreachable: {e}") from e
+        raise HTTPException(status_code=503, detail="qBittorrent unreachable") from e
     finally:
         await connector.close()
 

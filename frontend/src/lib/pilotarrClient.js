@@ -10,7 +10,8 @@ if (!apiUrl) {
 
 /**
  * Pilotarr API Client
- * Backend API for all data operations and service integrations
+ * Backend API for all data operations and service integrations.
+ * Authentication is handled via httpOnly cookie — no token injection needed.
  */
 export const PilotarrClient = axios?.create({
   baseURL: apiUrl,
@@ -18,15 +19,7 @@ export const PilotarrClient = axios?.create({
     "Content-Type": "application/json",
   },
   timeout: 30000,
-});
-
-// Inject JWT Bearer token from localStorage on every request
-PilotarrClient?.interceptors?.request?.use((config) => {
-  const token = localStorage.getItem("pilotarr_token");
-  if (token) {
-    config.headers["Authorization"] = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
 });
 
 // Add response interceptor for error handling

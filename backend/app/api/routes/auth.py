@@ -1,23 +1,24 @@
 """
-Auth routes — login, me, change-password.
+Auth routes — login, me, change-password, logout.
 
 All endpoints live under /api/auth.
 - POST /api/auth/login          — public
-- GET  /api/auth/me             — JWT required
-- POST /api/auth/change-password — JWT required
+- POST /api/auth/logout         — public
+- GET  /api/auth/me             — cookie required
+- POST /api/auth/change-password — cookie required
 """
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     ChangePasswordRequest,
     LoginRequest,
-    TokenResponse,
     UserResponse,
 )
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.db import get_db
 from app.models.models import User
@@ -33,18 +34,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
-@router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: Session = Depends(get_db)):
-    """Authenticate and return a JWT access token."""
+@router.post("/login", response_model=UserResponse)
+async def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    """Authenticate and set an httpOnly session cookie."""
     user = authenticate_user(db, body.username, body.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token(user.username)
-    return TokenResponse(access_token=token, token_type="bearer", username=user.username)
+    response.set_cookie(
+        key="pilotarr_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.COOKIE_SECURE,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600,
+    )
+    return UserResponse(username=user.username, is_active=user.is_active)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    """Clear the session cookie."""
+    response.delete_cookie(key="pilotarr_token", httponly=True, samesite="lax")
 
 
 @router.get("/me", response_model=UserResponse)
