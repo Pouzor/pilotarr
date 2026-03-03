@@ -83,13 +83,12 @@ class JellyseerrConnector(BaseConnector):
 
         Returns:
             Réponse de l'API
+
+        Raises:
+            httpx.HTTPError: En cas d'erreur HTTP (propagé au caller)
         """
-        try:
-            response = await self._post(f"/api/v1/request/{request_id}/approve")
-            return response
-        except Exception as e:
-            print(f"❌ Erreur approbation requête: {e}")
-            return {}
+        response = await self._post(f"/api/v1/request/{request_id}/approve")
+        return response
 
     async def decline_request(self, request_id: int) -> dict[str, Any]:
         """
@@ -100,13 +99,12 @@ class JellyseerrConnector(BaseConnector):
 
         Returns:
             Réponse de l'API
+
+        Raises:
+            httpx.HTTPError: En cas d'erreur HTTP (propagé au caller)
         """
-        try:
-            response = await self._post(f"/api/v1/request/{request_id}/decline")
-            return response
-        except Exception as e:
-            print(f"❌ Erreur refus requête: {e}")
-            return {}
+        response = await self._post(f"/api/v1/request/{request_id}/decline")
+        return response
 
     async def get_statistics(self) -> dict[str, Any]:
         """
@@ -119,9 +117,9 @@ class JellyseerrConnector(BaseConnector):
             all_requests = await self.get_requests(limit=1000, status="all")
 
             total = len(all_requests)
-            pending = sum(1 for r in all_requests if r.get("status") == 1)  # 1 = pending
-            approved = sum(1 for r in all_requests if r.get("status") == 2)  # 2 = approved
-            declined = sum(1 for r in all_requests if r.get("status") == 3)  # 3 = declined
+            pending = sum(1 for r in all_requests if r.get("status") == 1)
+            approved = sum(1 for r in all_requests if r.get("status") == 2)
+            declined = sum(1 for r in all_requests if r.get("status") in (3, 4))  # 3=declined, 4=failed
 
             return {"total": total, "pending": pending, "approved": approved, "declined": declined}
         except Exception as e:

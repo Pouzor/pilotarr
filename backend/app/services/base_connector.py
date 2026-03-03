@@ -72,7 +72,7 @@ class BaseConnector:
         try:
             response = await self.client.post(url, headers=headers, json=payload)
             response.raise_for_status()
-            return response.json()
+            return response.json() if response.content else {}
         except httpx.HTTPError as e:
             print(f"❌ Erreur HTTP POST {endpoint}: {e}")
             raise
