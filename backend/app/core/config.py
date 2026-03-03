@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # App Info
     APP_NAME: str = "Pilotarr"
-    APP_VERSION: str = "1.5.1"
+    APP_VERSION: str = "1.5.2"
 
     @property
     def DATABASE_URL(self) -> str:  # noqa: N802
