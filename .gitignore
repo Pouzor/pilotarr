@@ -71,3 +71,8 @@ CLAUDE.md
 
 # Project specs session (local state)
 _project_specs/session/current-state.md
+
+# Test coverage reports
+backend/.coverage
+frontend/coverage/
+TEST_COVERAGE.md
