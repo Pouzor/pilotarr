@@ -31,96 +31,60 @@ A full-stack dashboard for managing your home media server stack. Pilotarr provi
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **Node.js 18+**
-- **MySQL** (or MariaDB) instance
-- (Optional) **Docker** & **Docker Compose**
+- **Docker** & **Docker Compose** (Options 1 & 2)
+- Python 3.10+ and Node.js 18+ only needed if building from source (Option 3)
 
 ## Installation
 
-### 1. Clone the repository
+### Option 1 — One-line install (recommended)
 
 ```bash
-git clone <repo-url>
-cd pilotarr
+curl -fsSL https://raw.githubusercontent.com/Pouzor/pilotarr/main/install.sh | bash
 ```
 
-### 2. Backend setup
+This downloads the latest release files into a `pilotarr/` folder, creates a `.env` from the example, then tells you what to edit. Once secrets are set:
 
 ```bash
-cd backend
-
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate   # Windows
-
-# Install dependencies
-pip install -r requirements.txt
+cd pilotarr && docker compose up -d
 ```
 
-Create a `.env` file in `backend/` with the following variables:
+To **update** to a newer release, run the same command again from the parent directory — it detects the existing install and updates `docker-compose.yml` automatically, leaving your `.env` untouched.
 
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_NAME=pilotarr
+---
 
-# Security
-SECRET_KEY=your_secret_key
+### Option 2 — Manual (pre-built images, no git clone)
 
-#API KEY FOR Jellyfin (needed for playback session)
-API_KEY=your_api_key
-
-# Jellyfin
-JELLYFIN_PUBLIC_URL=http://your-jellyfin-url
-```
-
-Start the backend:
+Download the two files into an empty folder:
 
 ```bash
-uvicorn app.main:app --reload
-```
-
-The API is available at `http://localhost:8000` with interactive docs at `http://localhost:8000/docs`.
-
-### 3. Frontend setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start the dev server
-npm start
-```
-
-The frontend is available at `http://localhost:5173`.
-
-### 4. Docker — full stack (recommended)
-
-A single `docker-compose.yml` at the repo root orchestrates everything:
-MySQL + backend (FastAPI) + frontend (React served by nginx).
-
-```bash
-# 1. Copy and fill in your secrets (single file at the root — used by all services)
+curl -fsSL https://raw.githubusercontent.com/Pouzor/pilotarr/main/docker-compose.release.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/Pouzor/pilotarr/main/.env.example -o .env.example
 cp .env.example .env
-# Edit .env: set DB_PASSWORD, MYSQL_ROOT_PASSWORD, SECRET_KEY, API_KEY, etc.
-
-# 2. Build and start all services
-docker-compose up -d --build
-
-# 3. Check logs
-docker-compose logs -f
 ```
 
-> **Important:** The `.env` file **must be at the repository root** (next to `docker-compose.yml`). Docker Compose reads it automatically and injects the same credentials into both MySQL and the backend — keeping them in sync. A `backend/.env` file is only used for local development (without Docker).
+Edit `.env` and set `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `SECRET_KEY`, `API_KEY`, then:
 
-The app is available at `http://localhost` (or the port set by `PILOTARR_PORT`).
+```bash
+docker compose up -d
+```
+
+To update: `docker compose pull && docker compose up -d`
+
+---
+
+### Option 3 — From source (dev / self-build)
+
+```bash
+git clone https://github.com/Pouzor/pilotarr.git
+cd pilotarr
+cp .env.example .env
+# Edit .env: set DB_PASSWORD, MYSQL_ROOT_PASSWORD, SECRET_KEY, API_KEY
+docker compose up -d --build
+```
+
+---
+
+The app is available at `http://localhost` (or the port set by `PILOTARR_PORT` in `.env`).
 
 | Service | Internal address | Exposed |
 |---|---|---|
@@ -128,25 +92,13 @@ The app is available at `http://localhost` (or the port set by `PILOTARR_PORT`).
 | Backend (FastAPI) | `http://backend:8000` | not exposed externally |
 | MySQL | `mysql:3306` | not exposed externally |
 
-> **Note:** `VITE_PILOTARR_API_URL` is baked in as `/api` at build time. Nginx proxies
-> all `/api/*` requests to the backend container — no hardcoded IPs in the JS bundle.
-
 #### Useful commands
 
 ```bash
-docker-compose down          # stop all
-docker-compose down -v       # stop + delete MySQL volume (wipes DB)
-docker-compose build --no-cache  # force full rebuild
-docker-compose logs backend  # backend logs only
-```
-
-#### Dev mode (hot-reload)
-
-For local development with file watching, use the backend-only compose:
-
-```bash
-cd backend && docker-compose up   # backend + MySQL with --reload
-cd frontend && npm start          # Vite dev server on :4028
+docker compose logs -f           # follow all logs
+docker compose logs backend      # backend logs only
+docker compose down              # stop all
+docker compose down -v           # stop + wipe DB volume
 ```
 
 #### First Login
