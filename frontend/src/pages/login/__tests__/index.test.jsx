@@ -34,7 +34,7 @@ describe("Login page – rendering", () => {
   it("renders the sign-in form", () => {
     renderLogin();
     expect(screen.getByRole("heading", { name: /pilotarr/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("pilotarr")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Your login")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("••••••••")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
@@ -51,13 +51,95 @@ describe("Login page – rendering", () => {
   });
 });
 
+describe("Login page – validation", () => {
+  it("shows error when username is empty", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Username is required")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("shows error when password is empty", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "alice");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Password is required")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("shows error when username is too short", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "ab");
+    await user.type(screen.getByPlaceholderText("••••••••"), "password");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Username must be at least 5 characters")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("shows error when password is too short", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "alice");
+    await user.type(screen.getByPlaceholderText("••••••••"), "abc");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Password must be at least 5 characters")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("shows error when username contains spaces", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "ali ce");
+    await user.type(screen.getByPlaceholderText("••••••••"), "password");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Username must not contain spaces")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("shows error when password contains spaces", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "alice");
+    await user.type(screen.getByPlaceholderText("••••••••"), "pass word");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(screen.getByText("Password must not contain spaces")).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("clears field error when user starts typing", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+    expect(screen.getByText("Username is required")).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText("Your login"), "a");
+    expect(screen.queryByText("Username is required")).not.toBeInTheDocument();
+  });
+});
+
 describe("Login page – form interaction", () => {
   it("calls login with typed username and password", async () => {
     const user = userEvent.setup();
     mockLogin.mockResolvedValue({ ok: true });
     renderLogin();
 
-    await user.type(screen.getByPlaceholderText("pilotarr"), "alice");
+    await user.type(screen.getByPlaceholderText("Your login"), "alice");
     await user.type(screen.getByPlaceholderText("••••••••"), "mypassword");
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
@@ -69,8 +151,8 @@ describe("Login page – form interaction", () => {
     mockLogin.mockResolvedValue({ ok: false, error: "Invalid credentials" });
     renderLogin();
 
-    await user.type(screen.getByPlaceholderText("pilotarr"), "bad");
-    await user.type(screen.getByPlaceholderText("••••••••"), "wrong");
+    await user.type(screen.getByPlaceholderText("Your login"), "baduser");
+    await user.type(screen.getByPlaceholderText("••••••••"), "wrongpass");
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
     await waitFor(() => expect(screen.getByText("Invalid credentials")).toBeInTheDocument());

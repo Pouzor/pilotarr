@@ -13,6 +13,20 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const validate = () => {
+    const errors = {};
+    const u = username.trim();
+    const p = password.trim();
+    if (!u) errors.username = "Username is required";
+    else if (u.includes(" ")) errors.username = "Username must not contain spaces";
+    else if (u.length < 5) errors.username = "Username must be at least 5 characters";
+    if (!p) errors.password = "Password is required";
+    else if (p.includes(" ")) errors.password = "Password must not contain spaces";
+    else if (p.length < 5) errors.password = "Password must be at least 5 characters";
+    return errors;
+  };
 
   if (auth.initializing) return null;
   if (auth.user) return <Navigate to="/main-dashboard" replace />;
@@ -20,9 +34,15 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    const errors = validate();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
     setLoading(true);
 
-    const result = await auth.login(username, password);
+    const result = await auth.login(username.trim(), password.trim());
 
     setLoading(false);
     if (result.ok) {
@@ -51,25 +71,32 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="pilotarr"
-              required
-              autoComplete="username"
-            />
+            <div className="space-y-1">
+              <Input
+                label="Username"
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setFieldErrors((fe) => ({ ...fe, username: undefined }));
+                }}
+                placeholder="Your login"
+                autoComplete="username"
+              />
+              {fieldErrors.username && <p className="text-xs text-error">{fieldErrors.username}</p>}
+            </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="text-sm font-medium leading-none text-foreground">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((fe) => ({ ...fe, password: undefined }));
+                  }}
                   placeholder="••••••••"
-                  required
                   autoComplete="current-password"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 />
@@ -82,6 +109,7 @@ const Login = () => {
                   <Icon name={showPassword ? "EyeOff" : "Eye"} size={16} />
                 </button>
               </div>
+              {fieldErrors.password && <p className="text-xs text-error">{fieldErrors.password}</p>}
             </div>
 
             <Button type="submit" fullWidth loading={loading} className="mt-2">
