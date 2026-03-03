@@ -164,6 +164,14 @@ def create_analytics_tables():
             print(f"❌ Erreur lors de la conversion de sync_metadata.service_name en VARCHAR : {e}")
             return False
 
+    # Add 'AVAILABLE' to jellyseerr_requests.status ENUM
+    if "jellyseerr_requests" in get_existing_tables():
+        try:
+            migrate_add_available_to_jellyseerr_requests_status()
+        except Exception as e:
+            print(f"❌ Erreur lors de l'ajout de AVAILABLE dans jellyseerr_requests.status : {e}")
+            return False
+
     return True
 
 
@@ -595,6 +603,45 @@ def migrate_sync_metadata_service_name_to_varchar():
         db.execute(text("ALTER TABLE sync_metadata MODIFY COLUMN service_name VARCHAR(50) NOT NULL"))
         db.commit()
         print("✅ sync_metadata.service_name converted to VARCHAR(50)")
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+
+def migrate_add_available_to_jellyseerr_requests_status():
+    """Add 'AVAILABLE' to jellyseerr_requests.status ENUM if not already present."""
+    from sqlalchemy import text
+
+    from app.db import SessionLocal
+
+    inspector = inspect(engine)
+    columns = {col["name"]: col for col in inspector.get_columns("jellyseerr_requests")}
+    if "status" not in columns:
+        print("⚠️  status column not found in jellyseerr_requests, skipping")
+        return
+
+    col_type = str(columns["status"]["type"])
+    if "available" in col_type.lower():
+        print("✅ 'AVAILABLE' already in jellyseerr_requests.status ENUM, skipping")
+        return
+
+    if "enum" not in col_type.lower():
+        print("✅ jellyseerr_requests.status is not an ENUM, skipping")
+        return
+
+    print("🔄 Adding 'AVAILABLE' to jellyseerr_requests.status ENUM...")
+    db = SessionLocal()
+    try:
+        db.execute(
+            text(
+                "ALTER TABLE jellyseerr_requests MODIFY COLUMN status "
+                "ENUM('PENDING','APPROVED','DECLINED','AVAILABLE') NOT NULL DEFAULT 'PENDING'"
+            )
+        )
+        db.commit()
+        print("✅ 'AVAILABLE' added to jellyseerr_requests.status ENUM")
     except Exception as e:
         db.rollback()
         raise e
