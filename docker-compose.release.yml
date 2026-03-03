@@ -1,3 +1,12 @@
+# docker-compose.release.yml — for end-users installing Pilotarr
+# Uses pre-built images from ghcr.io (no local build required)
+#
+# Quick install:
+#   curl -O https://raw.githubusercontent.com/Pouzor/pilotarr/main/docker-compose.release.yml
+#   curl -O https://raw.githubusercontent.com/Pouzor/pilotarr/main/.env.example
+#   cp .env.example .env  # edit secrets
+#   docker compose -f docker-compose.release.yml up -d
+
 services:
   mysql:
     image: mysql:8.0
@@ -19,9 +28,7 @@ services:
       - pilotarr-network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/pouzor/pilotarr-backend:latest
     container_name: pilotarr-backend
     restart: unless-stopped
     environment:
@@ -43,11 +50,7 @@ services:
       - pilotarr-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_PILOTARR_API_URL: /api
+    image: ghcr.io/pouzor/pilotarr-frontend:latest
     container_name: pilotarr-frontend
     restart: unless-stopped
     ports:

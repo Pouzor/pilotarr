@@ -10,9 +10,7 @@ COPY . .
 
 # API URL is relative so nginx can proxy — override at build time if needed
 ARG VITE_PILOTARR_API_URL=/api
-ARG VITE_PILOTARR_API_KEY=
 ENV VITE_PILOTARR_API_URL=$VITE_PILOTARR_API_URL
-ENV VITE_PILOTARR_API_KEY=$VITE_PILOTARR_API_KEY
 
 RUN npm run build
 
