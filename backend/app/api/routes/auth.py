@@ -74,7 +74,12 @@ async def change_password(
     db: Session = Depends(get_db),
 ):
     """Change the password for the authenticated user."""
-    if not verify_password(body.current_password, current_user.hashed_password):
+    # Re-fetch within this session — current_user comes from get_current_user which
+    # uses a separate SessionLocal that is already closed, leaving a detached object.
+    from app.services.auth_service import get_user_by_username
+
+    user = get_user_by_username(db, current_user.username)
+    if not verify_password(body.current_password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
@@ -84,6 +89,6 @@ async def change_password(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="New password must be at least 8 characters",
         )
-    current_user.hashed_password = hash_password(body.new_password)
+    user.hashed_password = hash_password(body.new_password)
     db.commit()
-    logger.info("Password changed for user '%s'", current_user.username)
+    logger.info("Password changed for user '%s'", user.username)

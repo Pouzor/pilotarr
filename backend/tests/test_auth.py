@@ -85,6 +85,24 @@ class TestChangePassword:
         )
         assert resp.status_code == 204
 
+    def test_change_password_actually_persisted(self, client, auth_client):
+        """New password must work on next login — old password must be rejected."""
+        auth_client.post(
+            "/api/auth/change-password",
+            json={
+                "current_password": "testpass",
+                "new_password": "newpassword123",
+                "confirm_password": "newpassword123",
+            },
+        )
+        # Old password must no longer work
+        resp_old = client.post("/api/auth/login", json={"username": "testuser", "password": "testpass"})
+        assert resp_old.status_code == 401
+
+        # New password must work
+        resp_new = client.post("/api/auth/login", json={"username": "testuser", "password": "newpassword123"})
+        assert resp_new.status_code == 200
+
     def test_change_password_wrong_current(self, auth_client):
         resp = auth_client.post(
             "/api/auth/change-password",
