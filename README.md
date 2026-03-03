@@ -89,7 +89,7 @@ The app is available at `http://localhost` (or the port set by `PILOTARR_PORT` i
 | Service | Internal address | Exposed |
 |---|---|---|
 | Frontend (nginx) | — | `:80` (configurable via `PILOTARR_PORT`) |
-| Backend (FastAPI) | `http://backend:8000` | not exposed externally |
+| Backend (FastAPI) | `http://backend:8000` | not exposed externally — reached via nginx `/api/*` proxy |
 | MySQL | `mysql:3306` | not exposed externally |
 
 #### Useful commands
@@ -127,12 +127,14 @@ Sends playback events (play, pause, resume, stop) to Pilotarr in real time.
 1. Go to **Dashboard > Plugins > Webhook**
 2. Click **Add** to create a new webhook
 3. Set the following:
-   - **URL**: `http://<pilotarr-host>:8000/api/analytics/webhook/playback?apiKey=<your_api_key>`
+   - **URL**: `http://<pilotarr-host>/api/analytics/webhook/playback?apiKey=<your_api_key>`
    - **Notification type**: check all playback events — `Play`, `Pause`, `Resume`, `Stop`
    - **Send All Properties**: enabled
 4. Save
 
-The `apiKey` must match the `API_KEY` value in your backend `.env`.
+The `apiKey` must match the `API_KEY` value in your `.env`.
+
+> **Docker users:** the backend is not exposed directly — nginx proxies all `/api/*` requests to it. Use port `80` (or your `PILOTARR_PORT`) in the webhook URL, not `:8000`.
 
 > If you configured a `WEBHOOK_SECRET` in `.env`, also add the header `X-Webhook-Secret: <your_secret>` in the webhook plugin settings.
 
