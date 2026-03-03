@@ -78,6 +78,7 @@ class RequestStatus(int, enum.Enum):
     PENDING = 1
     APPROVED = 2
     DECLINED = 3
+    AVAILABLE = 4  # Seer status 5 — media fully available in library
 
 
 class ItemSortBy(str, enum.Enum):

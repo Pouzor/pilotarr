@@ -60,6 +60,7 @@ const JellyseerrRequests = () => {
         pending: 1,
         approved: 2,
         declined: 3,
+        available: 4,
       };
       const numericStatus = statusMap?.[filters?.status];
       filtered = filtered?.filter((request) => request?.status === numericStatus);
@@ -104,6 +105,7 @@ const JellyseerrRequests = () => {
       1: "bg-blue-500/10 text-blue-400 border-blue-500/20",
       2: "bg-green-500/10 text-green-400 border-green-500/20",
       3: "bg-red-500/10 text-red-400 border-red-500/20",
+      4: "bg-purple-500/10 text-purple-400 border-purple-500/20",
     };
     return colors?.[status] || colors?.[1];
   };
@@ -113,6 +115,7 @@ const JellyseerrRequests = () => {
       1: "Clock",
       2: "CheckCircle",
       3: "XCircle",
+      4: "PackageCheck",
     };
     return icons?.[status] || "Clock";
   };
@@ -122,6 +125,7 @@ const JellyseerrRequests = () => {
       1: "pending",
       2: "approved",
       3: "declined",
+      4: "available",
     };
     return labels?.[status] || "pending";
   };
@@ -161,8 +165,8 @@ const JellyseerrRequests = () => {
         />
 
         {/* Status Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          {[1, 2, 3]?.map((statusNum) => {
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4]?.map((statusNum) => {
             const count = requests?.filter((r) => r?.status === statusNum)?.length;
             const statusLabel = getStatusLabel(statusNum);
             return (

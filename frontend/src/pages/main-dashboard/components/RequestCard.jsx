@@ -21,10 +21,11 @@ const RequestCard = ({ request, onApprove, onReject }) => {
     return colors?.[request?.priority] || colors?.low;
   };
 
-  // PENDING=1, APPROVED=2, DECLINED=3
+  // PENDING=1, APPROVED=2, DECLINED=3, AVAILABLE=4
   const isPending = request?.status === 1;
   const isApproved = request?.status === 2;
   const isDeclined = request?.status === 3;
+  const isAvailable = request?.status === 4;
 
   return (
     <div className="bg-card border border-border rounded-lg p-3 md:p-4 hover:shadow-elevation-2 transition-smooth">
@@ -123,6 +124,12 @@ const RequestCard = ({ request, onApprove, onReject }) => {
             <div className="flex items-center gap-2 text-xs text-error">
               <Icon name="XCircle" size={14} />
               <span className="font-medium">Declined</span>
+            </div>
+          )}
+          {isAvailable && (
+            <div className="flex items-center gap-2 text-xs text-purple-400">
+              <Icon name="PackageCheck" size={14} />
+              <span className="font-medium">Available</span>
             </div>
           )}
         </div>

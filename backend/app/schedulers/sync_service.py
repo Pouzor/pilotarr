@@ -1027,13 +1027,14 @@ class SyncService:
             # Récupérer toutes les requêtes (tous statuts)
             requests = await connector.get_requests(limit=100, status="all")
 
-            # Mapper les statuts Jellyseerr vers notre enum
-            # 1=PENDING, 2=APPROVED, 3=DECLINED, 4=FAILED (traité comme DECLINED)
+            # Mapper les statuts Seer vers notre enum
+            # 1=PENDING, 2=APPROVED, 3=DECLINED, 4=FAILED, 5=AVAILABLE (Disponible)
             status_map = {
                 1: RequestStatus.PENDING,
                 2: RequestStatus.APPROVED,
                 3: RequestStatus.DECLINED,
                 4: RequestStatus.DECLINED,
+                5: RequestStatus.AVAILABLE,
             }
 
             # Construire un set des IDs Jellyseerr reçus depuis l'API
