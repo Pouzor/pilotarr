@@ -12,7 +12,6 @@ from app.models.enums import DeviceType, MediaType, SessionStatus
 VALID_MEDIA_ID = "a" * 32  # 32 hex chars
 VALID_USER_ID = "b" * 32
 WEBHOOK_URL = "/api/analytics/webhook/playback?apiKey=test-api-key"
-WEBHOOK_SECRET = "test-webhook-secret"
 
 
 def _play_payload(
@@ -64,8 +63,8 @@ def _stop_payload(media_id=VALID_MEDIA_ID, user_id=VALID_USER_ID, position_ticks
     return p
 
 
-def _post_webhook(client, payload, secret=WEBHOOK_SECRET):
-    headers = {"X-Webhook-Secret": secret, "Content-Type": "application/json"}
+def _post_webhook(client, payload):
+    headers = {"Content-Type": "application/json"}
     return client.post(WEBHOOK_URL, content=json.dumps(payload), headers=headers)
 
 
@@ -179,16 +178,11 @@ class TestWebhookPauseResume:
 
 
 class TestWebhookErrors:
-    def test_wrong_webhook_secret_returns_403(self, client):
-        r = _post_webhook(client, _play_payload(), secret="wrong-secret")
-        assert r.status_code == 403
-
     def test_wrong_api_key_returns_401(self, client):
-        headers = {"X-Webhook-Secret": WEBHOOK_SECRET, "Content-Type": "application/json"}
         r = client.post(
             "/api/analytics/webhook/playback?apiKey=bad-key",
             content=json.dumps(_play_payload()),
-            headers=headers,
+            headers={"Content-Type": "application/json"},
         )
         assert r.status_code == 401
 
@@ -210,9 +204,8 @@ class TestWebhookErrors:
         assert r.status_code == 400
 
     def test_oversized_payload_returns_413(self, client):
-        headers = {"X-Webhook-Secret": WEBHOOK_SECRET, "Content-Type": "application/json"}
         big_body = "x" * (1_048_576 + 1)
-        r = client.post(WEBHOOK_URL, content=big_body, headers=headers)
+        r = client.post(WEBHOOK_URL, content=big_body, headers={"Content-Type": "application/json"})
         assert r.status_code == 413
 
 

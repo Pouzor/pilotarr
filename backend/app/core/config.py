@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     API_KEY: str
-    WEBHOOK_SECRET: str
     ACCESS_TOKEN_EXPIRE_HOURS: int = 48  # 2 days
     DEFAULT_ADMIN_PASSWORD: str = "pilotarr"  # Override in .env — change after first login
     CORS_ORIGINS: list[str] = ["http://localhost", "http://localhost:4028"]

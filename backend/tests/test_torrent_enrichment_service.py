@@ -21,7 +21,6 @@ os.environ.setdefault("DB_PASSWORD", "test")
 os.environ.setdefault("DB_NAME", "test")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pilotarr-testing-only!")
 os.environ.setdefault("API_KEY", "test-api-key")
-os.environ.setdefault("WEBHOOK_SECRET", "test-webhook-secret")
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch

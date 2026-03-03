@@ -27,7 +27,6 @@ os.environ.setdefault("DB_PASSWORD", "test")
 os.environ.setdefault("DB_NAME", "test")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pilotarr-testing-only!")
 os.environ.setdefault("API_KEY", "test-api-key")
-os.environ.setdefault("WEBHOOK_SECRET", "test-webhook-secret")
 
 from app.services.radarr_connector import RadarrConnector  # noqa: E402
 

@@ -2,7 +2,6 @@
 Routes API pour les analytics et webhooks
 """
 
-import hmac
 import json
 import logging
 import re
@@ -23,7 +22,6 @@ from app.api.schemas import (
     UsageAnalyticsResponse,
     UserLeaderboardItem,
 )
-from app.core.config import settings
 from app.core.security import verify_webhook_api_key
 from app.db import get_db
 from app.models.enums import MediaType, PlaybackMethod, ServiceType, SessionStatus
@@ -73,11 +71,6 @@ async def receive_playback_webhook(
     - Resume : Reprise de lecture
     """
     try:
-        # Vérifier le secret webhook
-        request_secret = request.headers.get("X-Webhook-Secret", "")
-        if not hmac.compare_digest(request_secret, settings.WEBHOOK_SECRET):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Secret webhook invalide")
-
         # Valider la taille du payload (max 1 Mo)
         body = await request.body()
         if len(body) > 1_048_576:
