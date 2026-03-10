@@ -26,15 +26,23 @@ export const getRecentItems = async (limit = 10, sortBy = "added_date", sortOrde
  * @param {string} sortOrder - Sort order (asc, desc)
  * @returns {Promise<Array>} Array item
  */
-export const getLibraryItems = async (limit = 18, sortBy = "added_date", sortOrder = "desc") => {
+export const getLibraryItems = async (
+  limit = 18,
+  sortBy = "added_date",
+  sortOrder = "desc",
+  { search, mediaType, quality } = {},
+) => {
   try {
     const params = new URLSearchParams({ sort_by: sortBy, sort_order: sortOrder });
     if (limit !== null) params.append("limit", limit);
+    if (search) params.append("search", search);
+    if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+    if (quality && quality !== "all") params.append("quality", quality);
     const response = await pilotarrClient?.get(`/library?${params}`);
-    return response?.data || [];
+    return response?.data || { items: [], total: 0 };
   } catch (error) {
     console.error("Error fetching library items:", error?.message);
-    return [];
+    return { items: [], total: 0 };
   }
 };
 

@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.schemas import (
     EpisodeDetailResponse,
     EpisodeResponse,
     LibraryItemResponse,
+    LibraryListResponse,
     SeasonResponse,
     SeasonWithEpisodesResponse,
     WatchedUpdateRequest,
@@ -82,35 +83,55 @@ async def set_season_watched(
     return {"watched": body.watched, "updated": len(episodes)}
 
 
-@router.get("/", response_model=list[LibraryItemResponse])
+def _apply_quality_filter(query, quality: str):
+    """Filter by resolved quality — mirrors frontend priority (4K > 1080p > 720p)."""
+    q = func.lower(LibraryItem.quality)
+    is_4k = or_(q.like("%4k%"), q.like("%2160p%"))
+    is_1080p = q.like("%1080p%")
+    is_720p = q.like("%720p%")
+
+    if quality == "4K":
+        return query.filter(is_4k)
+    if quality == "1080p":
+        return query.filter(and_(is_1080p, not_(is_4k)))
+    if quality == "720p":
+        return query.filter(and_(is_720p, not_(is_1080p), not_(is_4k)))
+    return query
+
+
+@router.get("/", response_model=LibraryListResponse)
 async def get_library(
     limit: int | None = Query(default=None, ge=1),
     sort_by: ItemSortBy = Query(default=ItemSortBy.ADDED_DATE),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    search: str | None = Query(default=None),
+    media_type: str | None = Query(default=None),
+    quality: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    """Récupérer les items récemment ajoutés"""
-    # Sort still uses the pre-aggregated torrent_info JSON column for ratio
+    """Récupérer les items de la librairie avec filtres et pagination côté serveur."""
     sort_mapping = {
         ItemSortBy.ADDED_DATE: LibraryItem.created_at,
         ItemSortBy.TITLE: LibraryItem.title,
         ItemSortBy.SIZE: LibraryItem.size,
         ItemSortBy.RATIO: func.json_extract(LibraryItem.torrent_info, "$.ratio"),
     }
+    sort_clause = sort_mapping[sort_by].asc() if sort_order == "asc" else sort_mapping[sort_by].desc()
 
-    sort_column = sort_mapping[sort_by]
+    query = db.query(LibraryItem).options(selectinload(LibraryItem.torrents))
 
-    if sort_order == "asc":
-        sort_clause = sort_column.asc()
-    else:
-        sort_clause = sort_column.desc()
+    if search:
+        query = query.filter(func.lower(LibraryItem.title).like(f"%{search.lower()}%"))
 
-    query = (
-        db.query(LibraryItem)
-        .where(LibraryItem.size != 0)
-        .options(selectinload(LibraryItem.torrents))
-        .order_by(sort_clause)
-    )
+    if media_type and media_type in ("movie", "tv"):
+        query = query.filter(LibraryItem.media_type == MediaType(media_type))
+
+    if quality:
+        query = _apply_quality_filter(query, quality)
+
+    query = query.order_by(sort_clause)
+
+    total = query.count()
     items = query.limit(limit).all() if limit else query.all()
 
     # Batch-fetch watched episode counts for all TV items (avoids N+1)
@@ -127,32 +148,32 @@ async def get_library(
 
     results = []
     for item in items:
-        if item.media_type == MediaType.TV:
-            watched_count = watched_counts.get(item.id, 0)
-        else:
-            watched_count = 1 if item.watched else 0
-        data = {
-            "id": item.id,
-            "title": item.title,
-            "year": item.year,
-            "media_type": item.media_type,
-            "image_url": item.image_url,
-            "image_alt": item.image_alt,
-            "quality": item.quality,
-            "rating": item.rating,
-            "description": item.description,
-            "added_date": item.added_date,
-            "size": item.size,
-            "nb_media": item.nb_media,
-            "watched": item.watched,
-            "watched_count": watched_count,
-            "media_streams": item.media_streams,
-            "created_at": item.created_at,
-            "torrent_info": _build_torrent_info_array(item),
-        }
-        results.append(data)
+        watched_count = (
+            watched_counts.get(item.id, 0) if item.media_type == MediaType.TV else (1 if item.watched else 0)
+        )
+        results.append(
+            {
+                "id": item.id,
+                "title": item.title,
+                "year": item.year,
+                "media_type": item.media_type,
+                "image_url": item.image_url,
+                "image_alt": item.image_alt,
+                "quality": item.quality,
+                "rating": item.rating,
+                "description": item.description,
+                "added_date": item.added_date,
+                "size": item.size,
+                "nb_media": item.nb_media,
+                "watched": item.watched,
+                "watched_count": watched_count,
+                "media_streams": item.media_streams,
+                "created_at": item.created_at,
+                "torrent_info": _build_torrent_info_array(item),
+            }
+        )
 
-    return results
+    return {"items": results, "total": total}
 
 
 @router.get("/{id}", response_model=LibraryItemResponse)
@@ -160,12 +181,7 @@ async def get_library_item(
     id: str,
     db: Session = Depends(get_db),
 ):
-    item = (
-        db.query(LibraryItem)
-        .where(LibraryItem.id == id, LibraryItem.size != 0)
-        .options(selectinload(LibraryItem.torrents))
-        .first()
-    )
+    item = db.query(LibraryItem).where(LibraryItem.id == id).options(selectinload(LibraryItem.torrents)).first()
 
     if not item:
         raise HTTPException(status_code=404, detail="Library item not found")

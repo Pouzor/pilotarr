@@ -52,8 +52,8 @@ class TestListLibrary:
         assert len(data["items"]) == 2
         assert data["total"] == 5
 
-    def test_library_item_zero_size_excluded(self, auth_client, db):
-        """Items with size=0 are filtered out."""
+    def test_library_item_zero_size_included(self, auth_client, db):
+        """Items with size='0.0 GB' (no files yet) are still shown in the library."""
         from app.models.models import LibraryItem
 
         item = LibraryItem(
@@ -63,7 +63,7 @@ class TestListLibrary:
             image_url="https://example.com/p.jpg",
             image_alt="Ghost",
             quality="720p",
-            size="0",
+            size="0.0 GB",
             nb_media=0,
             watched=False,
         )
@@ -72,8 +72,8 @@ class TestListLibrary:
         resp = auth_client.get("/api/library/")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["items"] == []
-        assert data["total"] == 0
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "Ghost"
 
 
 # ── GET /api/library/ — filter params ────────────────────────────────────────

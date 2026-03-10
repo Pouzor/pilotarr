@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../../components/navigation/Header";
 
 import Icon from "../../components/AppIcon";
@@ -85,25 +85,39 @@ const aggregateTorrentInfo = (torrentInfoArray) => {
 
 const Library = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
     contentType: "all",
     quality: "all",
     sortBy: "added_date",
     order: "desc",
   });
-  const [limit, setLimit] = useState(18); // null = no limit (All)
+  const [limit, setLimit] = useState(18);
   const [mediaData, setMediaData] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Fetch data from API
+  // Debounce search input (300ms) and reset pagination on new search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setLimit(18);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch data from API — all filtering done server-side
   useEffect(() => {
     const fetchMediaData = async () => {
       setLoading(true);
       try {
-        const data = await getLibraryItems(limit, filters?.sortBy, filters?.order);
-        // Transform API response to match component structure
+        const { items, total } = await getLibraryItems(limit, filters?.sortBy, filters?.order, {
+          search: debouncedSearch,
+          mediaType: filters?.contentType,
+          quality: filters?.quality,
+        });
         const transformedData =
-          data?.map((item) => {
+          items?.map((item) => {
             const agg = aggregateTorrentInfo(item?.torrent_info);
             return {
               id: item?.id,
@@ -112,7 +126,7 @@ const Library = () => {
               quality: item?.quality || "N/A",
               size: item?.size || "0.0 GB",
               addedDate: item?.created_at?.split("T")?.[0] || item?.added_date,
-              viewCount: 99, // Hard-coded as requested
+              viewCount: 99,
               torrent_info: item?.torrent_info,
               torrentCount: agg?.torrentCount || item?.torrent_count || 0,
               hasSubtitles: true,
@@ -125,51 +139,28 @@ const Library = () => {
             };
           }) || [];
         setMediaData(transformedData);
+        setTotalCount(total);
       } catch (error) {
         console.error("Error loading media data:", error);
         setMediaData([]);
+        setTotalCount(0);
       } finally {
         setLoading(false);
       }
     };
 
     fetchMediaData();
-  }, [limit, filters?.sortBy, filters?.order]);
-
-  // Filter and search logic (removed sorting - now handled by API)
-  const filteredMedia = useMemo(() => {
-    let result = [...mediaData];
-
-    // Apply search filter
-    if (searchQuery) {
-      result = result?.filter((item) =>
-        item?.title?.toLowerCase()?.includes(searchQuery?.toLowerCase()),
-      );
-    }
-
-    // Apply content type filter
-    if (filters?.contentType !== "all") {
-      result = result?.filter((item) => item?.type === filters?.contentType);
-    }
-
-    // Apply quality filter — resolve to highest resolution to avoid substring false-positives
-    // (e.g. a Sonarr profile named "HD-720p-1080p" should only match 1080p)
-    if (filters?.quality !== "all") {
-      const resolveResolution = (qualityStr) => {
-        if (!qualityStr) return null;
-        const q = qualityStr.toLowerCase();
-        if (q.includes("4k") || q.includes("2160p")) return "4K";
-        if (q.includes("1080p")) return "1080p";
-        if (q.includes("720p")) return "720p";
-        return null;
-      };
-      result = result?.filter((item) => resolveResolution(item?.quality) === filters?.quality);
-    }
-
-    return result;
-  }, [searchQuery, filters?.contentType, filters?.quality, mediaData]);
+  }, [
+    limit,
+    filters?.sortBy,
+    filters?.order,
+    debouncedSearch,
+    filters?.contentType,
+    filters?.quality,
+  ]);
 
   const handleFilterChange = (key, value) => {
+    setLimit(18); // reset pagination when filters change
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -198,7 +189,7 @@ const Library = () => {
           onSearchChange={setSearchQuery}
           filters={filters}
           onFilterChange={handleFilterChange}
-          totalResults={filteredMedia?.length}
+          totalResults={totalCount}
         />
 
         {/* Media Grid */}
@@ -210,7 +201,7 @@ const Library = () => {
             </div>
           </div>
         ) : (
-          <MediaGrid media={filteredMedia} />
+          <MediaGrid media={mediaData} />
         )}
 
         {/* Limit Selector */}

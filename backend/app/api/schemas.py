@@ -293,6 +293,11 @@ class LibraryItemResponse(BaseModel):
         from_attributes = True
 
 
+class LibraryListResponse(BaseModel):
+    items: list[LibraryItemResponse]
+    total: int
+
+
 # Calendar Event Schemas
 class CalendarEventResponse(BaseModel):
     id: str
