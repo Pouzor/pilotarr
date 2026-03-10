@@ -573,6 +573,69 @@ class ServerPerformanceResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# User detail schemas
+# ---------------------------------------------------------------------------
+
+
+class UserDetailOverview(BaseModel):
+    total_plays: int
+    hours_watched: float
+    movies_count: int
+    episodes_count: int
+    last_seen: datetime | None = None
+    favorite_device: str | None = None
+
+
+class UserGenreItem(BaseModel):
+    genre: str
+    count: int
+
+
+class UserDeviceItem(BaseModel):
+    device_type: str
+    count: int
+    percentage: float
+
+
+class UserPlaybackMethods(BaseModel):
+    direct: int
+    transcoded: int
+
+
+class UserTopTitle(BaseModel):
+    title: str
+    media_type: str
+    plays: int
+    poster_url: str | None = None
+
+
+class UserActivityDay(BaseModel):
+    date: str
+    plays: int
+
+
+class UserRecentSession(BaseModel):
+    media_title: str
+    media_type: str
+    episode_info: str | None = None
+    watched_seconds: int
+    start_time: str
+    device_type: str
+    playback_method: str
+
+
+class UserDetailResponse(BaseModel):
+    user_name: str
+    overview: UserDetailOverview
+    genres: list[UserGenreItem]
+    devices: list[UserDeviceItem]
+    playback_methods: UserPlaybackMethods
+    top_titles: list[UserTopTitle]
+    recent_sessions: list[UserRecentSession]
+    activity_by_day: list[UserActivityDay]
+
+
+# ---------------------------------------------------------------------------
 # Genre statistics schemas
 # ---------------------------------------------------------------------------
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Icon from "../../../components/AppIcon";
 
 const DEVICE_ICON = {
@@ -17,6 +18,7 @@ const RANK_STYLES = [
 ];
 
 const UserLeaderboard = ({ users, isLoading }) => {
+  const navigate = useNavigate();
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-lg p-4 md:p-6">
@@ -72,9 +74,12 @@ const UserLeaderboard = ({ users, isLoading }) => {
             <p className="text-xs md:text-sm text-muted-foreground">Ranked by hours watched</p>
           </div>
         </div>
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+        <button
+          onClick={() => navigate("/user-stats")}
+          className="text-xs text-muted-foreground bg-muted hover:bg-muted/70 hover:text-foreground px-2 py-1 rounded-md transition-colors cursor-pointer"
+        >
           {users.length} user{users.length !== 1 ? "s" : ""}
-        </span>
+        </button>
       </div>
 
       <div className="space-y-3">
@@ -85,7 +90,11 @@ const UserLeaderboard = ({ users, isLoading }) => {
           const initial = user.user_name?.[0]?.toUpperCase() || "?";
 
           return (
-            <div key={user.user_name} className="bg-muted/30 rounded-lg p-3 space-y-2">
+            <div
+              key={user.user_name}
+              className="bg-muted/30 hover:bg-muted/50 rounded-lg p-3 space-y-2 cursor-pointer transition-colors"
+              onClick={() => navigate(`/user-stats?user=${encodeURIComponent(user.user_name)}`)}
+            >
               <div className="flex items-center gap-3">
                 {/* Rank badge */}
                 <div

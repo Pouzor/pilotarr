@@ -13,6 +13,7 @@ import JellyseerrRequests from "./pages/jellyseerr-requests";
 import Calendar from "./pages/calendar";
 import Torrents from "./pages/torrents";
 import Indexer from "./pages/indexer";
+import UserStats from "./pages/user-stats";
 import Login from "./pages/login";
 import ChangePassword from "./pages/change-password";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -124,6 +125,14 @@ const Routes = () => {
               element={
                 <ProtectedRoute>
                   <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-stats"
+              element={
+                <ProtectedRoute>
+                  <UserStats />
                 </ProtectedRoute>
               }
             />

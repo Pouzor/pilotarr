@@ -100,6 +100,16 @@ export const getPlaybackSessions = async (start, end) => {
   }
 };
 
+export const getUserDetail = async (username) => {
+  try {
+    const response = await pilotarrClient?.get(`/analytics/users/${encodeURIComponent(username)}`);
+    return response?.data || null;
+  } catch (error) {
+    console.error("Failed to fetch user detail:", error);
+    return null;
+  }
+};
+
 export const getGenreStats = async () => {
   try {
     const response = await pilotarrClient?.get("/analytics/genres");

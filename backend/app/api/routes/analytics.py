@@ -724,3 +724,147 @@ async def get_genre_stats(db: Session = Depends(get_db)):
         movies=[GenreStatItem(genre=g, count=c) for g, c in movie_counter.most_common(10)],
         tv=[GenreStatItem(genre=g, count=c) for g, c in tv_counter.most_common(10)],
     )
+
+
+@router.get("/users/{username}", response_model=None)
+async def get_user_detail(username: str, db: Session = Depends(get_db)):
+    """
+    👤 Full per-user analytics derived from PlaybackSession history.
+    Returns overview, genres (watch-based), devices, playback methods,
+    top titles, recent sessions and 30-day activity.
+    """
+    from collections import Counter, defaultdict
+    from datetime import timezone
+
+    from app.api.schemas import (
+        UserActivityDay,
+        UserDetailOverview,
+        UserDetailResponse,
+        UserDeviceItem,
+        UserGenreItem,
+        UserPlaybackMethods,
+        UserRecentSession,
+        UserTopTitle,
+    )
+
+    sessions = (
+        db.query(PlaybackSession)
+        .filter(PlaybackSession.user_name == username, PlaybackSession.is_active.is_(False))
+        .order_by(PlaybackSession.start_time.desc())
+        .all()
+    )
+
+    if not sessions:
+        raise HTTPException(status_code=404, detail="User not found or no playback history")
+
+    total_plays = len(sessions)
+    total_seconds = sum(s.watched_seconds or 0 for s in sessions)
+    movies_count = sum(1 for s in sessions if s.media_type == MediaType.MOVIE)
+    episodes_count = sum(1 for s in sessions if s.media_type == MediaType.TV)
+    last_seen = max((s.start_time for s in sessions), default=None)
+
+    # --- Favorite device ---
+    device_counter: Counter = Counter()
+    for s in sessions:
+        if s.device_type:
+            key = s.device_type.value if hasattr(s.device_type, "value") else str(s.device_type)
+            device_counter[key] += 1
+
+    favorite_device = device_counter.most_common(1)[0][0] if device_counter else None
+
+    # --- Device breakdown ---
+    devices = [
+        {"device_type": dt, "count": cnt, "percentage": round(cnt / total_plays * 100, 1)}
+        for dt, cnt in device_counter.most_common()
+    ]
+
+    # --- Playback methods ---
+    direct = sum(
+        1
+        for s in sessions
+        if s.playback_method
+        and (
+            s.playback_method == PlaybackMethod.DIRECT_PLAY
+            or (hasattr(s.playback_method, "value") and "direct" in s.playback_method.value.lower())
+        )
+    )
+    transcoded = total_plays - direct
+
+    # --- Genre breakdown (watch-based via library_item join) ---
+    library_item_ids = list({s.library_item_id for s in sessions if s.library_item_id})
+    genre_counter: Counter = Counter()
+    if library_item_ids:
+        items = db.query(LibraryItem.id, LibraryItem.genres).filter(LibraryItem.id.in_(library_item_ids)).all()
+        genres_by_id = {item.id: item.genres or [] for item in items}
+        for s in sessions:
+            if s.library_item_id:
+                for genre in genres_by_id.get(s.library_item_id, []):
+                    if genre:
+                        genre_counter[genre] += 1
+
+    genres = [{"genre": g, "count": c} for g, c in genre_counter.most_common(10)]
+
+    # --- Top titles ---
+    title_map: dict[str, dict] = defaultdict(lambda: {"plays": 0, "media_type": "", "poster_url": None})
+    for s in sessions:
+        entry = title_map[s.media_title]
+        entry["plays"] += 1
+        entry["media_type"] = s.media_type.value if hasattr(s.media_type, "value") else str(s.media_type)
+        if s.poster_url and not entry["poster_url"]:
+            entry["poster_url"] = s.poster_url
+
+    top_titles = sorted(
+        [{"title": k, **v} for k, v in title_map.items()],
+        key=lambda x: x["plays"],
+        reverse=True,
+    )[:10]
+
+    # --- Recent sessions (last 20) ---
+    recent_sessions = [
+        {
+            "media_title": s.media_title,
+            "media_type": s.media_type.value if hasattr(s.media_type, "value") else str(s.media_type),
+            "episode_info": s.episode_info,
+            "watched_seconds": s.watched_seconds or 0,
+            "start_time": s.start_time.isoformat(),
+            "device_type": s.device_type.value if hasattr(s.device_type, "value") else str(s.device_type or ""),
+            "playback_method": s.playback_method.value
+            if hasattr(s.playback_method, "value")
+            else str(s.playback_method or ""),
+        }
+        for s in sessions[:20]
+    ]
+
+    # --- 30-day activity ---
+    from datetime import timedelta
+
+    today = datetime.now(timezone.utc).date()
+    day_counter: Counter = Counter()
+    cutoff = today - timedelta(days=29)
+    for s in sessions:
+        day = s.start_time.date()
+        if day >= cutoff:
+            day_counter[day] += 1
+
+    activity_by_day = [
+        {"date": (today - timedelta(days=i)).isoformat(), "plays": day_counter.get(today - timedelta(days=i), 0)}
+        for i in range(29, -1, -1)
+    ]
+
+    return UserDetailResponse(
+        user_name=username,
+        overview=UserDetailOverview(
+            total_plays=total_plays,
+            hours_watched=round(total_seconds / 3600, 1),
+            movies_count=movies_count,
+            episodes_count=episodes_count,
+            last_seen=last_seen,
+            favorite_device=favorite_device,
+        ),
+        genres=[UserGenreItem(**g) for g in genres],
+        devices=[UserDeviceItem(**d) for d in devices],
+        playback_methods=UserPlaybackMethods(direct=direct, transcoded=transcoded),
+        top_titles=[UserTopTitle(**t) for t in top_titles],
+        recent_sessions=[UserRecentSession(**r) for r in recent_sessions],
+        activity_by_day=[UserActivityDay(**a) for a in activity_by_day],
+    )
