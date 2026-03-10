@@ -119,6 +119,7 @@ class LibraryItem(Base):
     torrent_hash = Column(String(255), nullable=True, index=True)
     torrent_info = Column(JSON, nullable=True)
     media_streams = Column(JSON, nullable=True)  # Subtitle + audio tracks from Jellyfin (movies)
+    genres = Column(JSON, nullable=True)  # List of genre strings from Sonarr/Radarr
     nb_media = Column(Integer, default=0)
     watched = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

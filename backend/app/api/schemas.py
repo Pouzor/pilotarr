@@ -572,6 +572,21 @@ class ServerPerformanceResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Genre statistics schemas
+# ---------------------------------------------------------------------------
+
+
+class GenreStatItem(BaseModel):
+    genre: str
+    count: int
+
+
+class GenreStatsResponse(BaseModel):
+    movies: list[GenreStatItem]
+    tv: list[GenreStatItem]
+
+
 class ProwlarrIndexerStats(BaseModel):
     numberOfQueries: int = 0  # noqa: N815
     numberOfFailedQueries: int = 0  # noqa: N815

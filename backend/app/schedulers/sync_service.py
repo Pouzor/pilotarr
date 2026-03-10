@@ -253,6 +253,8 @@ class SyncService:
                         self._upsert_torrent(existing.id, torrent_hash)
                     # Toujours mettre à jour nb_media
                     existing.nb_media = nb_media
+                    # Update genres
+                    existing.genres = movie.get("genres") or []
                     # Update media_path
                     if media_path:
                         existing.media_path = media_path
@@ -310,6 +312,7 @@ class SyncService:
                         torrent_hash=torrent_hash,
                         nb_media=nb_media,
                         media_path=media_path,
+                        genres=movie.get("genres") or [],
                     )
 
                     self.db.add(item)
@@ -539,6 +542,8 @@ class SyncService:
                         )
                     # Toujours mettre à jour nb_media
                     existing.nb_media = nb_media
+                    # Update genres
+                    existing.genres = series.get("genres") or []
                     # Update media_path
                     if media_path:
                         existing.media_path = media_path
@@ -594,6 +599,7 @@ class SyncService:
                         torrent_hash=first_hash,
                         nb_media=nb_media,
                         media_path=media_path,
+                        genres=series.get("genres") or [],
                     )
 
                     self.db.add(item)

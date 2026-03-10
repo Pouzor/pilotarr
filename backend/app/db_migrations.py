@@ -172,6 +172,14 @@ def create_analytics_tables():
             print(f"❌ Erreur lors de l'ajout de AVAILABLE dans jellyseerr_requests.status : {e}")
             return False
 
+    # Add genres column to library_items
+    if "library_items" in get_existing_tables():
+        try:
+            migrate_add_genres_to_library_items()
+        except Exception as e:
+            print(f"❌ Erreur lors de l'ajout de genres sur library_items : {e}")
+            return False
+
     return True
 
 
@@ -694,3 +702,28 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("❌ Migration échouée")
         print("=" * 60)
+
+
+def migrate_add_genres_to_library_items():
+    """Add genres JSON column to library_items if it doesn't exist."""
+    from sqlalchemy import text
+
+    from app.db import SessionLocal
+
+    inspector = inspect(engine)
+    columns = {col["name"] for col in inspector.get_columns("library_items")}
+    if "genres" in columns:
+        print("✅ genres already exists on library_items, skipping")
+        return
+
+    print("🔄 Adding genres column to library_items...")
+    db = SessionLocal()
+    try:
+        db.execute(text("ALTER TABLE library_items ADD COLUMN genres JSON NULL"))
+        db.commit()
+        print("✅ genres column added to library_items")
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()

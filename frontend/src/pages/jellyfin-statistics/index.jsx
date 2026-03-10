@@ -6,11 +6,13 @@ import UserLeaderboard from "./components/UserLeaderboard";
 import ServerPerformancePanel from "./components/ServerPerformancePanel";
 import DeviceBreakdownCard from "./components/DeviceBreakdownCard";
 import MediaAnalyticsTable from "./components/MediaAnalyticsTable";
+import GenreStatsCard from "./components/GenreStatsCard";
 import {
   getUsageAnalytics,
   getDeviceBreakdown,
   getMediaAnalytics,
   getServerMetrics,
+  getGenreStats,
   getUserLeaderboard,
 } from "../../services/analyticsService";
 import Header from "../../components/navigation/Header";
@@ -30,6 +32,8 @@ const JellyfinStatistics = () => {
   const [isLoadingUsage, setIsLoadingUsage] = useState(false);
   const [deviceData, setDeviceData] = useState([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(true);
+  const [genreData, setGenreData] = useState({ movies: [], tv: [] });
+  const [isLoadingGenres, setIsLoadingGenres] = useState(true);
   const [mediaData, setMediaData] = useState([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
   const [performanceData, setPerformanceData] = useState(null);
@@ -211,12 +215,29 @@ const JellyfinStatistics = () => {
     fetchLeaderboard();
   }, []);
 
+  const fetchGenreStats = async () => {
+    setIsLoadingGenres(true);
+    try {
+      const data = await getGenreStats();
+      setGenreData(data);
+    } catch {
+      setGenreData({ movies: [], tv: [] });
+    } finally {
+      setIsLoadingGenres(false);
+    }
+  };
+
   // Fetch data on mount and when date range changes
   useEffect(() => {
     fetchUsageAnalytics();
     fetchDeviceBreakdown();
     fetchMediaAnalytics();
   }, [filters?.dateRange, filters?.customStartDate, filters?.customEndDate]);
+
+  // Genre stats don't depend on date range — fetch once on mount
+  useEffect(() => {
+    fetchGenreStats();
+  }, []);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -311,6 +332,10 @@ const JellyfinStatistics = () => {
               isLoading={isLoadingPerformance}
             />
             <DeviceBreakdownCard deviceData={deviceData} isLoading={isLoadingDevices} />
+          </div>
+
+          <div className="mb-6 md:mb-8">
+            <GenreStatsCard genreData={genreData} isLoading={isLoadingGenres} />
           </div>
 
           <MediaAnalyticsTable data={mediaData} isLoading={isLoadingMedia} />

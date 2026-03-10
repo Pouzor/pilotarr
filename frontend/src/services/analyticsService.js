@@ -100,6 +100,16 @@ export const getPlaybackSessions = async (start, end) => {
   }
 };
 
+export const getGenreStats = async () => {
+  try {
+    const response = await pilotarrClient?.get("/analytics/genres");
+    return response?.data || { movies: [], tv: [] };
+  } catch (error) {
+    console.error("Failed to fetch genre stats:", error);
+    return { movies: [], tv: [] };
+  }
+};
+
 export const getUserLeaderboard = async (limit = 10) => {
   try {
     const response = await pilotarrClient?.get("/analytics/users", { params: { limit } });

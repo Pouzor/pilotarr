@@ -693,3 +693,34 @@ async def get_sessions(
             seen[key] = s
 
     return list(seen.values())
+
+
+@router.get("/genres")
+async def get_genre_stats(db: Session = Depends(get_db)):
+    """
+    🎭 Genre statistics — top 10 genres for movies and TV shows separately.
+    Aggregated from the genres field populated during Sonarr/Radarr sync.
+    """
+    from collections import Counter
+
+    from app.api.schemas import GenreStatItem, GenreStatsResponse
+
+    rows = db.query(LibraryItem.media_type, LibraryItem.genres).all()
+
+    movie_counter: Counter = Counter()
+    tv_counter: Counter = Counter()
+
+    for media_type, genres in rows:
+        if not genres:
+            continue
+        for genre in genres:
+            if genre:
+                if media_type == MediaType.MOVIE:
+                    movie_counter[genre] += 1
+                else:
+                    tv_counter[genre] += 1
+
+    return GenreStatsResponse(
+        movies=[GenreStatItem(genre=g, count=c) for g, c in movie_counter.most_common(10)],
+        tv=[GenreStatItem(genre=g, count=c) for g, c in tv_counter.most_common(10)],
+    )
