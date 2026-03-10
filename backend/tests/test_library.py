@@ -20,30 +20,37 @@ class TestListLibrary:
     def test_empty_library(self, auth_client):
         resp = auth_client.get("/api/library/")
         assert resp.status_code == 200
-        assert resp.json() == []
+        data = resp.json()
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_library_with_movie(self, auth_client, make_library_item):
         make_library_item(title="Inception", year=2010)
         resp = auth_client.get("/api/library/")
         assert resp.status_code == 200
-        data = resp.json()
+        data = resp.json()["items"]
         assert len(data) == 1
         assert data[0]["title"] == "Inception"
         assert data[0]["year"] == 2010
+        assert resp.json()["total"] == 1
 
     def test_library_returns_multiple_items(self, auth_client, make_library_item):
         make_library_item(title="Movie A")
         make_library_item(title="Movie B")
         resp = auth_client.get("/api/library/")
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        data = resp.json()
+        assert len(data["items"]) == 2
+        assert data["total"] == 2
 
     def test_library_with_limit(self, auth_client, make_library_item):
         for i in range(5):
             make_library_item(title=f"Movie {i}")
         resp = auth_client.get("/api/library/?limit=2")
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        data = resp.json()
+        assert len(data["items"]) == 2
+        assert data["total"] == 5
 
     def test_library_item_zero_size_excluded(self, auth_client, db):
         """Items with size=0 are filtered out."""
@@ -64,7 +71,92 @@ class TestListLibrary:
         db.commit()
         resp = auth_client.get("/api/library/")
         assert resp.status_code == 200
-        assert resp.json() == []
+        data = resp.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+
+
+# ── GET /api/library/ — filter params ────────────────────────────────────────
+
+
+class TestListLibraryFilters:
+    def test_search_by_title(self, auth_client, make_library_item):
+        make_library_item(title="Inception")
+        make_library_item(title="The Matrix")
+        resp = auth_client.get("/api/library/?search=incep")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "Inception"
+
+    def test_search_is_case_insensitive(self, auth_client, make_library_item):
+        make_library_item(title="Interstellar")
+        resp = auth_client.get("/api/library/?search=INTER")
+        data = resp.json()
+        assert data["total"] == 1
+
+    def test_filter_by_media_type_movie(self, auth_client, make_library_item, make_tv_show):
+        make_library_item(title="Inception")  # movie
+        make_tv_show()  # tv
+        resp = auth_client.get("/api/library/?media_type=movie")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["media_type"] == "movie"
+
+    def test_filter_by_media_type_tv(self, auth_client, make_library_item, make_tv_show):
+        make_library_item(title="Inception")  # movie
+        make_tv_show()  # tv show
+        resp = auth_client.get("/api/library/?media_type=tv")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["media_type"] == "tv"
+
+    def test_quality_filter_1080p_excludes_720p(self, auth_client, make_library_item):
+        make_library_item(title="HD Movie", quality="Bluray-1080p")
+        make_library_item(title="SD Movie", quality="HDTV-720p")
+        resp = auth_client.get("/api/library/?quality=1080p")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "HD Movie"
+
+    def test_quality_filter_720p_excludes_1080p(self, auth_client, make_library_item):
+        make_library_item(title="HD Movie", quality="Bluray-1080p")
+        make_library_item(title="SD Movie", quality="HDTV-720p")
+        resp = auth_client.get("/api/library/?quality=720p")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "SD Movie"
+
+    def test_quality_filter_1080p_excludes_profile_with_both(self, auth_client, make_library_item):
+        """A quality like 'HD-720p-1080p' should only match 1080p (highest wins)."""
+        make_library_item(title="Mixed", quality="HD-720p-1080p")
+        resp_720 = auth_client.get("/api/library/?quality=720p")
+        resp_1080 = auth_client.get("/api/library/?quality=1080p")
+        assert resp_720.json()["total"] == 0
+        assert resp_1080.json()["total"] == 1
+
+    def test_quality_filter_4k(self, auth_client, make_library_item):
+        make_library_item(title="4K Film", quality="Bluray-2160p")
+        make_library_item(title="HD Film", quality="Bluray-1080p")
+        resp = auth_client.get("/api/library/?quality=4K")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "4K Film"
+
+    def test_search_and_media_type_combined(self, auth_client, make_library_item, make_tv_show):
+        make_library_item(title="Inception")
+        make_tv_show()
+        resp = auth_client.get("/api/library/?search=inception&media_type=movie")
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["title"] == "Inception"
+
+    def test_no_results_returns_empty_items_and_zero_total(self, auth_client, make_library_item):
+        make_library_item(title="Inception")
+        resp = auth_client.get("/api/library/?search=doesnotexist")
+        data = resp.json()
+        assert data["total"] == 0
+        assert data["items"] == []
 
 
 # ── GET /api/library/{id} ─────────────────────────────────────────────────────

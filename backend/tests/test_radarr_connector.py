@@ -329,3 +329,77 @@ class TestGetStatistics:
         connector.get_movies = AsyncMock(side_effect=Exception("fail"))
         result = await connector.get_statistics()
         assert result == {}
+
+
+# ── find_movie_id_by_title ────────────────────────────────────────────────────
+
+
+class TestFindMovieIdByTitle:
+    async def test_returns_id_for_matching_title(self, connector):
+        connector.get_movies = AsyncMock(
+            return_value=[
+                {"id": 1, "title": "Inception"},
+                {"id": 2, "title": "The Matrix"},
+            ]
+        )
+        result = await connector.find_movie_id_by_title("Inception")
+        assert result == 1
+
+    async def test_case_insensitive_match(self, connector):
+        connector.get_movies = AsyncMock(return_value=[{"id": 3, "title": "Interstellar"}])
+        result = await connector.find_movie_id_by_title("interstellar")
+        assert result == 3
+
+    async def test_returns_none_when_not_found(self, connector):
+        connector.get_movies = AsyncMock(return_value=[{"id": 1, "title": "Inception"}])
+        result = await connector.find_movie_id_by_title("Unknown Movie")
+        assert result is None
+
+    async def test_exception_returns_none(self, connector):
+        connector.get_movies = AsyncMock(side_effect=Exception("fail"))
+        result = await connector.find_movie_id_by_title("Inception")
+        assert result is None
+
+
+# ── refresh_movie ─────────────────────────────────────────────────────────────
+
+
+class TestRefreshMovie:
+    async def test_success_returns_true(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 1}))
+        result = await connector.refresh_movie(10)
+        assert result is True
+
+    async def test_posts_correct_command(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 1}))
+        await connector.refresh_movie(10)
+        payload = connector.client.post.call_args.kwargs["json"]
+        assert payload["name"] == "RefreshMovie"
+        assert payload["movieIds"] == [10]
+
+    async def test_exception_returns_false(self, connector):
+        connector.client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        result = await connector.refresh_movie(10)
+        assert result is False
+
+
+# ── rescan_movie ──────────────────────────────────────────────────────────────
+
+
+class TestRescanMovie:
+    async def test_success_returns_true(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 2}))
+        result = await connector.rescan_movie(10)
+        assert result is True
+
+    async def test_posts_correct_command(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 2}))
+        await connector.rescan_movie(10)
+        payload = connector.client.post.call_args.kwargs["json"]
+        assert payload["name"] == "RescanMovie"
+        assert payload["movieIds"] == [10]
+
+    async def test_exception_returns_false(self, connector):
+        connector.client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        result = await connector.rescan_movie(10)
+        assert result is False

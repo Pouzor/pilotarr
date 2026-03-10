@@ -478,3 +478,47 @@ class TestGetStatistics:
         connector.get_series = AsyncMock(side_effect=Exception("fail"))
         result = await connector.get_statistics()
         assert result == {}
+
+
+# ── refresh_series ────────────────────────────────────────────────────────────
+
+
+class TestRefreshSeries:
+    async def test_success_returns_true(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 1}))
+        result = await connector.refresh_series(5)
+        assert result is True
+
+    async def test_posts_correct_command(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 1}))
+        await connector.refresh_series(5)
+        payload = connector.client.post.call_args.kwargs["json"]
+        assert payload["name"] == "RefreshSeries"
+        assert payload["seriesId"] == 5
+
+    async def test_exception_returns_false(self, connector):
+        connector.client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        result = await connector.refresh_series(5)
+        assert result is False
+
+
+# ── rescan_series ─────────────────────────────────────────────────────────────
+
+
+class TestRescanSeries:
+    async def test_success_returns_true(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 2}))
+        result = await connector.rescan_series(5)
+        assert result is True
+
+    async def test_posts_correct_command(self, connector):
+        connector.client.post = AsyncMock(return_value=_make_response({"id": 2}))
+        await connector.rescan_series(5)
+        payload = connector.client.post.call_args.kwargs["json"]
+        assert payload["name"] == "RescanSeries"
+        assert payload["seriesId"] == 5
+
+    async def test_exception_returns_false(self, connector):
+        connector.client.post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        result = await connector.rescan_series(5)
+        assert result is False

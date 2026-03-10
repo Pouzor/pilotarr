@@ -17,6 +17,7 @@ import {
   setSeasonWatched,
   monitorEpisode,
   searchEpisode,
+  refreshMediaItem,
 } from "../libraryService";
 
 beforeEach(() => {
@@ -24,23 +25,55 @@ beforeEach(() => {
 });
 
 describe("getLibraryItems", () => {
-  it("returns data from API", async () => {
-    pilotarrClient.get.mockResolvedValue({ data: [{ id: 1, title: "Movie" }] });
+  it("returns items and total from API", async () => {
+    pilotarrClient.get.mockResolvedValue({
+      data: { items: [{ id: 1, title: "Movie" }], total: 1 },
+    });
     const result = await getLibraryItems();
-    expect(result).toEqual([{ id: 1, title: "Movie" }]);
+    expect(result).toEqual({ items: [{ id: 1, title: "Movie" }], total: 1 });
     expect(pilotarrClient.get).toHaveBeenCalledWith(expect.stringContaining("/library"));
   });
 
-  it("returns empty array on error", async () => {
+  it("returns empty result on error", async () => {
     pilotarrClient.get.mockRejectedValue(new Error("fail"));
     const result = await getLibraryItems();
-    expect(result).toEqual([]);
+    expect(result).toEqual({ items: [], total: 0 });
   });
 
   it("passes sort params in URL", async () => {
-    pilotarrClient.get.mockResolvedValue({ data: [] });
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
     await getLibraryItems(10, "title", "asc");
     expect(pilotarrClient.get).toHaveBeenCalledWith(expect.stringContaining("sort_by=title"));
+  });
+
+  it("passes search param when provided", async () => {
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    await getLibraryItems(18, "added_date", "desc", { search: "inception" });
+    expect(pilotarrClient.get).toHaveBeenCalledWith(expect.stringContaining("search=inception"));
+  });
+
+  it("passes media_type param when not 'all'", async () => {
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    await getLibraryItems(18, "added_date", "desc", { mediaType: "movie" });
+    expect(pilotarrClient.get).toHaveBeenCalledWith(expect.stringContaining("media_type=movie"));
+  });
+
+  it("omits media_type param when 'all'", async () => {
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    await getLibraryItems(18, "added_date", "desc", { mediaType: "all" });
+    expect(pilotarrClient.get).not.toHaveBeenCalledWith(expect.stringContaining("media_type=all"));
+  });
+
+  it("passes quality param when not 'all'", async () => {
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    await getLibraryItems(18, "added_date", "desc", { quality: "1080p" });
+    expect(pilotarrClient.get).toHaveBeenCalledWith(expect.stringContaining("quality=1080p"));
+  });
+
+  it("omits quality param when 'all'", async () => {
+    pilotarrClient.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    await getLibraryItems(18, "added_date", "desc", { quality: "all" });
+    expect(pilotarrClient.get).not.toHaveBeenCalledWith(expect.stringContaining("quality=all"));
   });
 });
 
@@ -126,5 +159,21 @@ describe("searchEpisode", () => {
   it("returns false on error", async () => {
     pilotarrClient.post.mockRejectedValue(new Error("fail"));
     expect(await searchEpisode(1, 1, 1)).toBe(false);
+  });
+});
+
+describe("refreshMediaItem", () => {
+  it("posts to refresh endpoint and returns data", async () => {
+    pilotarrClient.post.mockResolvedValue({
+      data: { refreshing: true, message: "Refresh and scan started in Sonarr" },
+    });
+    const result = await refreshMediaItem("abc-123");
+    expect(result).toEqual({ refreshing: true, message: "Refresh and scan started in Sonarr" });
+    expect(pilotarrClient.post).toHaveBeenCalledWith("/library/abc-123/refresh");
+  });
+
+  it("throws on error", async () => {
+    pilotarrClient.post.mockRejectedValue(new Error("503"));
+    await expect(refreshMediaItem("abc-123")).rejects.toThrow("503");
   });
 });
