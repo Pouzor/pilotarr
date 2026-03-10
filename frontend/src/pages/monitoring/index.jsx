@@ -4,7 +4,9 @@ import Icon from "../../components/AppIcon";
 import FilterToolbar from "./components/FilterToolbar";
 import MonitoringTable from "./components/MonitoringTable";
 import Button from "../../components/ui/Button";
+import Toast from "../../components/ui/Toast";
 import { getMonitoringItems } from "../../services/monitoringService";
+import { refreshMediaItem } from "../../services/libraryService";
 
 const Monitoring = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,6 +16,7 @@ const Monitoring = () => {
     quality: "all",
   });
   const [selectedItems, setSelectedItems] = useState([]);
+  const [toast, setToast] = useState(null);
   const [monitoringData, setMonitoringData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,6 +106,18 @@ const Monitoring = () => {
     }
   };
 
+  const handleRefresh = async (id) => {
+    try {
+      const result = await refreshMediaItem(id);
+      setToast({ message: result?.message || "Refresh and scan started.", variant: "success" });
+    } catch {
+      setToast({
+        message: "Failed to start refresh. Check service configuration.",
+        variant: "error",
+      });
+    }
+  };
+
   const handleBulkAction = (action) => {
     console.log(`Bulk action: ${action} on items:`, selectedItems);
     // Implement bulk action logic here
@@ -110,6 +125,9 @@ const Monitoring = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {toast && (
+        <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+      )}
       <Header />
       <div className="container mx-auto px-4 pt-20 md:pt-24 pb-6 md:pb-8">
         {/* Page Header */}
@@ -206,6 +224,7 @@ const Monitoring = () => {
               selectedItems={selectedItems}
               onSelectAll={handleSelectAll}
               onSelectItem={handleSelectItem}
+              onRefresh={handleRefresh}
             />
           </>
         )}

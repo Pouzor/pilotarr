@@ -1,16 +1,27 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Icon from "../../../components/AppIcon";
 import StatusIndicator from "./StatusIndicator";
 import ExpandableRow from "./ExpandableRow";
 import { Checkbox } from "../../../components/ui/Checkbox";
 import Button from "../../../components/ui/Button";
 
-const MonitoringTable = ({ data, selectedItems, onSelectAll, onSelectItem }) => {
+const MonitoringTable = ({ data, selectedItems, onSelectAll, onSelectItem, onRefresh }) => {
   const [expandedRows, setExpandedRows] = useState([]);
+  const [refreshingIds, setRefreshingIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({
     key: "title",
     direction: "asc",
   });
+
+  const handleRefresh = async (id) => {
+    if (refreshingIds.includes(id)) return;
+    setRefreshingIds((prev) => [...prev, id]);
+    try {
+      await onRefresh(id);
+    } finally {
+      setRefreshingIds((prev) => prev.filter((r) => r !== id));
+    }
+  };
 
   const toggleRow = (id) => {
     setExpandedRows((prev) =>
@@ -182,15 +193,10 @@ const MonitoringTable = ({ data, selectedItems, onSelectAll, onSelectItem }) => 
                         variant="ghost"
                         size="icon"
                         iconName="RefreshCw"
-                        className="h-8 w-8"
-                        onClick={() => console.log("Refresh", item?.id)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        iconName="Search"
-                        className="h-8 w-8"
-                        onClick={() => console.log("Search", item?.id)}
+                        className={`h-8 w-8 ${refreshingIds.includes(item?.id) ? "animate-spin opacity-50" : ""}`}
+                        disabled={refreshingIds.includes(item?.id)}
+                        onClick={() => handleRefresh(item?.id)}
+                        title="Refresh & rescan"
                       />
                     </div>
                   </td>
@@ -263,13 +269,10 @@ const MonitoringTable = ({ data, selectedItems, onSelectAll, onSelectItem }) => 
                     variant="outline"
                     size="sm"
                     iconName="RefreshCw"
-                    onClick={() => console.log("Refresh", item?.id)}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    iconName="Search"
-                    onClick={() => console.log("Search", item?.id)}
+                    disabled={refreshingIds.includes(item?.id)}
+                    className={refreshingIds.includes(item?.id) ? "animate-spin opacity-50" : ""}
+                    onClick={() => handleRefresh(item?.id)}
+                    title="Refresh & rescan"
                   />
                 </div>
               </div>

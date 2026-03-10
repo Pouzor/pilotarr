@@ -1,6 +1,5 @@
 import React from "react";
 import Icon from "../../../components/AppIcon";
-import Button from "../../../components/ui/Button";
 
 const ExpandableRow = ({ item }) => {
   return (
@@ -112,34 +111,6 @@ const ExpandableRow = ({ item }) => {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Monitoring Configuration Actions */}
-      <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Icon name="Settings" size={16} className="text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Monitoring Configuration</span>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            iconName={item?.monitoringStatus === "monitored" ? "EyeOff" : "Eye"}
-          >
-            {item?.monitoringStatus === "monitored" ? "Unmonitor" : "Monitor"}
-          </Button>
-          <Button variant="outline" size="sm" iconName="Edit">
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            iconName="Trash2"
-            className="text-error hover:text-error"
-          >
-            Remove
-          </Button>
         </div>
       </div>
     </div>
