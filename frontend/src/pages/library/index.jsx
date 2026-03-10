@@ -152,9 +152,18 @@ const Library = () => {
       result = result?.filter((item) => item?.type === filters?.contentType);
     }
 
-    // Apply quality filter
+    // Apply quality filter — resolve to highest resolution to avoid substring false-positives
+    // (e.g. a Sonarr profile named "HD-720p-1080p" should only match 1080p)
     if (filters?.quality !== "all") {
-      result = result?.filter((item) => item?.quality?.includes(filters?.quality));
+      const resolveResolution = (qualityStr) => {
+        if (!qualityStr) return null;
+        const q = qualityStr.toLowerCase();
+        if (q.includes("4k") || q.includes("2160p")) return "4K";
+        if (q.includes("1080p")) return "1080p";
+        if (q.includes("720p")) return "720p";
+        return null;
+      };
+      result = result?.filter((item) => resolveResolution(item?.quality) === filters?.quality);
     }
 
     return result;
