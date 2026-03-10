@@ -5,10 +5,6 @@ vi.mock("../../../../components/AppIcon", () => ({
   default: ({ name }) => <span data-testid={`icon-${name}`} />,
 }));
 
-vi.mock("../../../../components/ui/Button", () => ({
-  default: ({ children }) => <button>{children}</button>,
-}));
-
 import ExpandableRow from "../ExpandableRow";
 
 const movieItem = {
@@ -58,14 +54,11 @@ describe("ExpandableRow – movie (radarr)", () => {
     expect(screen.getAllByText("1080p").length).toBeGreaterThan(0);
   });
 
-  it("shows Unmonitor button when item is monitored", () => {
+  it("does not show Unmonitor/Monitor action buttons", () => {
     render(<ExpandableRow item={movieItem} />);
-    expect(screen.getByText("Unmonitor")).toBeInTheDocument();
-  });
-
-  it("shows Monitor button when item is unmonitored", () => {
+    expect(screen.queryByText("Unmonitor")).not.toBeInTheDocument();
     render(<ExpandableRow item={{ ...movieItem, monitoringStatus: "unmonitored" }} />);
-    expect(screen.getByText("Monitor")).toBeInTheDocument();
+    expect(screen.queryByText("Monitor")).not.toBeInTheDocument();
   });
 });
 
