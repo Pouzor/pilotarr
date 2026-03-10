@@ -171,6 +171,36 @@ class RadarrConnector(BaseConnector):
 
         return None
 
+    async def find_movie_id_by_title(self, title: str) -> int | None:
+        """Find Radarr movie ID by title (case-insensitive)."""
+        try:
+            movies = await self.get_movies()
+            for movie in movies:
+                if movie.get("title", "").lower() == title.lower():
+                    return movie.get("id")
+            return None
+        except Exception as e:
+            print(f"❌ Erreur recherche film '{title}': {e}")
+            return None
+
+    async def refresh_movie(self, radarr_movie_id: int) -> bool:
+        """Trigger a metadata refresh for a movie via POST /api/v3/command RefreshMovie."""
+        try:
+            await self._post("/api/v3/command", json={"name": "RefreshMovie", "movieIds": [radarr_movie_id]})
+            return True
+        except Exception as e:
+            print(f"❌ Erreur refresh film {radarr_movie_id}: {e}")
+            return False
+
+    async def rescan_movie(self, radarr_movie_id: int) -> bool:
+        """Trigger a disk rescan for a movie via POST /api/v3/command RescanMovie."""
+        try:
+            await self._post("/api/v3/command", json={"name": "RescanMovie", "movieIds": [radarr_movie_id]})
+            return True
+        except Exception as e:
+            print(f"❌ Erreur rescan film {radarr_movie_id}: {e}")
+            return False
+
     async def get_quality_profiles(self) -> dict[int, str]:
         """Retourne un mapping {id: name} des profils de qualité Radarr"""
         try:

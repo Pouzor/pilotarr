@@ -88,9 +88,12 @@ const EpisodesList = ({ seasons, mediaId }) => {
         {seasonsState?.map((season, seasonIndex) => (
           <div key={seasonIndex}>
             {/* Season Header */}
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => toggleSeason(seasonIndex)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+              onKeyDown={(e) => e.key === "Enter" && toggleSeason(seasonIndex)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Icon
@@ -135,7 +138,7 @@ const EpisodesList = ({ seasons, mediaId }) => {
                   title="Mark season as watched/unwatched"
                 />
               </div>
-            </button>
+            </div>
 
             {/* Episodes List */}
             {expandedSeasons?.includes(seasonIndex) && (

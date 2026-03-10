@@ -6,7 +6,12 @@ import HeroBanner from "./components/HeroBanner";
 import MetadataPanel from "./components/MetadataPanel";
 import EpisodesList from "./components/EpisodesList";
 import FileInfoPanel from "./components/FileInfoPanel";
-import { getLibraryItemById, getSeasonsWithEpisodes } from "../../services/libraryService";
+import {
+  getLibraryItemById,
+  getSeasonsWithEpisodes,
+  refreshMediaItem,
+} from "../../services/libraryService";
+import Toast from "../../components/ui/Toast";
 import { getServiceConfiguration } from "../../services/configService";
 
 const buildUrl = (config) => {
@@ -21,6 +26,8 @@ const MediaDetail = () => {
   const { id } = useParams();
   const [media, setMedia] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -124,6 +131,21 @@ const MediaDetail = () => {
     fetchMedia();
   }, [id]);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await refreshMediaItem(id);
+      setToast({ message: result?.message || "Refresh and scan started.", variant: "success" });
+    } catch {
+      setToast({
+        message: "Failed to start refresh. Check service configuration.",
+        variant: "error",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -145,8 +167,13 @@ const MediaDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Toast notification */}
+      {toast && (
+        <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+      )}
+
       {/* Hero Banner */}
-      <HeroBanner media={media} />
+      <HeroBanner media={media} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">

@@ -114,3 +114,8 @@ export const searchEpisode = async (mediaId, seasonNumber, episodeNumber) => {
     return false;
   }
 };
+
+export const refreshMediaItem = async (id) => {
+  const response = await pilotarrClient?.post(`/library/${id}/refresh`);
+  return response?.data;
+};

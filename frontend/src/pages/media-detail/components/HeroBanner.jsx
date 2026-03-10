@@ -3,7 +3,7 @@ import Image from "../../../components/AppImage";
 import Icon from "../../../components/AppIcon";
 import Button from "../../../components/ui/Button";
 
-const HeroBanner = ({ media }) => {
+const HeroBanner = ({ media, onRefresh, isRefreshing = false }) => {
   const [isMonitored, setIsMonitored] = useState(media?.monitored || false);
 
   const getTypeIcon = () => {
@@ -106,7 +106,13 @@ const HeroBanner = ({ media }) => {
               <Button variant="outline" iconName="Search">
                 Manual Search
               </Button>
-              <Button variant="outline" iconName="RefreshCw">
+              <Button
+                variant="outline"
+                iconName="RefreshCw"
+                loading={isRefreshing}
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
                 Refresh
               </Button>
             </div>

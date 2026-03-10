@@ -315,6 +315,49 @@ def _get_sonarr_connector(db: Session):
     return create_connector(service)
 
 
+def _get_radarr_connector(db: Session):
+    """Helper: return an active RadarrConnector or raise 503."""
+    service = (
+        db.query(ServiceConfiguration)
+        .filter(ServiceConfiguration.service_name == "radarr", ServiceConfiguration.is_active.is_(True))
+        .first()
+    )
+    if not service:
+        raise HTTPException(status_code=503, detail="Radarr service not configured")
+    return create_connector(service)
+
+
+@router.post("/{id}/refresh")
+async def refresh_media(id: str, db: Session = Depends(get_db)):
+    """Trigger RefreshSeries+RescanSeries (TV) or RefreshMovie+RescanMovie (movie) in Sonarr/Radarr."""
+    item = db.query(LibraryItem).filter(LibraryItem.id == id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Library item not found")
+
+    if item.media_type == MediaType.TV:
+        first_season = db.query(Season).filter(Season.library_item_id == id).first()
+        if not first_season:
+            raise HTTPException(status_code=404, detail="No season found for series")
+        connector = _get_sonarr_connector(db)
+        try:
+            await connector.refresh_series(first_season.sonarr_series_id)
+            await connector.rescan_series(first_season.sonarr_series_id)
+        finally:
+            await connector.close()
+        return {"refreshing": True, "message": "Refresh and scan started in Sonarr"}
+    else:
+        connector = _get_radarr_connector(db)
+        try:
+            movie_id = await connector.find_movie_id_by_title(item.title)
+            if not movie_id:
+                raise HTTPException(status_code=404, detail=f"Movie '{item.title}' not found in Radarr")
+            await connector.refresh_movie(movie_id)
+            await connector.rescan_movie(movie_id)
+        finally:
+            await connector.close()
+        return {"refreshing": True, "message": "Refresh and scan started in Radarr"}
+
+
 @router.post("/{id}/seasons/{season_number}/episodes/{episode_number}/monitor")
 async def monitor_episode(
     id: str,

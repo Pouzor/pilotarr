@@ -289,6 +289,24 @@ class SonarrConnector(BaseConnector):
             print(f"❌ Erreur monitor épisode {sonarr_episode_id}: {e}")
             return False
 
+    async def refresh_series(self, sonarr_series_id: int) -> bool:
+        """Trigger a metadata refresh for a series via POST /api/v3/command RefreshSeries."""
+        try:
+            await self._post("/api/v3/command", json={"name": "RefreshSeries", "seriesId": sonarr_series_id})
+            return True
+        except Exception as e:
+            print(f"❌ Erreur refresh série {sonarr_series_id}: {e}")
+            return False
+
+    async def rescan_series(self, sonarr_series_id: int) -> bool:
+        """Trigger a disk rescan for a series via POST /api/v3/command RescanSeries."""
+        try:
+            await self._post("/api/v3/command", json={"name": "RescanSeries", "seriesId": sonarr_series_id})
+            return True
+        except Exception as e:
+            print(f"❌ Erreur rescan série {sonarr_series_id}: {e}")
+            return False
+
     async def search_episode(self, sonarr_episode_id: int) -> bool:
         """
         Trigger an episode search via POST /api/v3/command EpisodeSearch.
