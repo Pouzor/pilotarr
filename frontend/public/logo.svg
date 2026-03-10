@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <radialGradient id="sweep" cx="65%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+
+  <!-- Outer radar ring -->
+  <circle cx="32" cy="32" r="24" fill="none" stroke="url(#grad1)" stroke-width="1.5" opacity="0.35"/>
+  <!-- Inner radar ring -->
+  <circle cx="32" cy="32" r="14" fill="none" stroke="url(#grad1)" stroke-width="1" opacity="0.25"/>
+
+  <!-- Crosshairs -->
+  <line x1="32" y1="8"  x2="32" y2="56" stroke="#3b82f6" stroke-width="0.75" opacity="0.12"/>
+  <line x1="8"  y1="32" x2="56" y2="32" stroke="#3b82f6" stroke-width="0.75" opacity="0.12"/>
+
+  <!-- Radar sweep sector (270° → 315°, i.e. top → top-right) -->
+  <path d="M32,32 L32,8 A24,24 0 0,1 49,15 Z" fill="url(#sweep)"/>
+
+  <!-- Sweep arm -->
+  <line x1="32" y1="32" x2="49" y2="15" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Blip (target) -->
+  <circle cx="44" cy="19" r="3.5" fill="#f59e0b"/>
+  <circle cx="44" cy="19" r="6"   fill="none" stroke="#f59e0b" stroke-width="1" opacity="0.4"/>
+
+  <!-- Center dot -->
+  <circle cx="32" cy="32" r="2.5" fill="url(#grad1)"/>
+</svg>

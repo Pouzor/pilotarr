@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Icon from "../AppIcon";
+import PilotarrLogo from "../PilotarrLogo";
 import { useAuth } from "../../contexts/AuthContext";
 import { getServiceConfigurations } from "../../services/configService";
 
@@ -118,7 +119,7 @@ const Header = () => {
         <div className="nav-header-container">
           <div className="nav-header-logo">
             <div className="nav-header-logo-icon">
-              <Icon name="Server" size={24} color="var(--color-primary)" />
+              <PilotarrLogo size={32} />
             </div>
             <span className="nav-header-logo-text">Pilotarr</span>
           </div>
@@ -196,7 +197,7 @@ const Header = () => {
         <div className="nav-mobile-menu-header">
           <div className="nav-header-logo">
             <div className="nav-header-logo-icon">
-              <Icon name="Server" size={24} color="var(--color-primary)" />
+              <PilotarrLogo size={32} />
             </div>
             <span className="nav-header-logo-text">Pilotarr</span>
           </div>
