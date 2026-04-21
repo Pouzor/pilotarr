@@ -329,7 +329,7 @@ describe("Calendar page – event filters", () => {
     await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1"));
 
     await user.click(screen.getByTestId("filter-tv"));
-    expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0");
+    await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0"));
   });
 
   it("filters out movie release events when movieReleases is toggled off", async () => {
@@ -342,7 +342,7 @@ describe("Calendar page – event filters", () => {
     await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1"));
 
     await user.click(screen.getByTestId("filter-movies"));
-    expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0");
+    await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0"));
   });
 
   it("filters out view events when views is toggled off", async () => {
@@ -353,7 +353,7 @@ describe("Calendar page – event filters", () => {
     await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1"));
 
     await user.click(screen.getByTestId("filter-views"));
-    expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0");
+    await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0"));
   });
 
   it("toggling a filter back on restores the events", async () => {
@@ -366,9 +366,9 @@ describe("Calendar page – event filters", () => {
     await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1"));
 
     await user.click(screen.getByTestId("filter-tv")); // off
-    expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0");
+    await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("0"));
 
     await user.click(screen.getByTestId("filter-tv")); // back on
-    expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1");
+    await waitFor(() => expect(screen.getByTestId("sidebar-events-count").textContent).toBe("1"));
   });
 });
