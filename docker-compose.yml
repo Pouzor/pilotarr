@@ -34,6 +34,7 @@ services:
       API_KEY: ${API_KEY}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
       DEBUG: ${DEBUG:-false}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-pilotarr}
     depends_on:
       mysql:
         condition: service_healthy
